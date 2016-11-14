@@ -11,8 +11,14 @@ public:
     // reads data from obj file
     static bool read(std::ifstream& in, Mesh& mesh);
     
+    // reads eigenvectors and eigenvalues from file
+    static void readEig(std::ifstream& in, Eigen::VectorXd& evals, Eigen::MatrixXd& evecs);
+    
     // writes data in obj format
     static void write(std::ofstream& out, const Mesh& mesh);
+    
+    // writes eigenvectors and eigenvalues to file
+    static void writeEig(std::ofstream& out, Eigen::VectorXd& evals, Eigen::MatrixXd& evecs);
     
 private:
     // reserves spave for mesh vertices, uvs, normals and faces

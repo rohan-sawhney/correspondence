@@ -1,25 +1,25 @@
 #ifndef MESH_H
 #define MESH_H
 
-#include "Types.h"
 #include "Vertex.h"
 #include "Edge.h"
 #include "Face.h"
 #include "HalfEdge.h"
+#include "Descriptor.h"
 
 class Mesh {
 public:
     // default constructor
     Mesh();
-    
-    // copy constructor
-    Mesh(const Mesh& mesh);
         
     // read mesh from file
     bool read(const std::string& fileName);
     
     // write mesh to file
     bool write(const std::string& fileName) const;
+    
+    // compute descriptor
+    void computeDescriptor(int descriptorName);
             
     // member variables
     std::vector<HalfEdge> halfEdges;
@@ -27,10 +27,14 @@ public:
     std::vector<Edge> edges;
     std::vector<Face> faces;
     std::vector<HalfEdgeIter> boundaries;
+    std::string name;
 
 private:
     // center mesh about origin and rescale to unit radius
     void normalize();
+    
+    // member variable
+    Descriptor descriptor;
 };
 
 #endif

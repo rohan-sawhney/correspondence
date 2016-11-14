@@ -18,6 +18,7 @@ Shader normalShader;
 Shader wireframeShader;
 
 Camera camera;
+int t = 0;
 float lastTime = 0.0;
 float dt = 0.0;
 float lastX = 0.0, lastY = 0.0;
@@ -27,7 +28,8 @@ bool firstMouse = true;
 std::vector<Mesh> meshes = {Mesh(), Mesh()};
 std::vector<GLMesh> glMeshes = {GLMesh(meshes[0]), GLMesh(meshes[1])};
 
-std::vector<std::vector<Eigen::Vector3f>> defaultColors(meshes.size());
+const Eigen::Vector3f defaultColor(1.0, 0.5, 0.2);
+std::vector<std::vector<Eigen::Vector3f>> colors(meshes.size());
 
 const Eigen::Vector3f lightPosition(0.0, 3.0, -3.0);
 const Eigen::Vector3f lightColor(1.0, 1.0, 1.0);
@@ -35,6 +37,8 @@ const Eigen::Vector3f lightColor(1.0, 1.0, 1.0);
 bool success = true;
 bool showNormals = false;
 bool showWireframe = false;
+bool showDescriptor = false;
+bool computedDescriptor = false;
 
 void setupShaders()
 {
@@ -83,6 +87,9 @@ void printInstructions()
 {
     std::cerr << "1: toggle normals\n"
               << "2: toggle wireframe\n"
+              << "3: toggle descriptor\n"
+              << "4: compute hks\n"
+              << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
               << "e/q: move up/down\n"
@@ -90,12 +97,26 @@ void printInstructions()
               << std::endl;
 }
 
-void setDefaultColors(int i)
+void setColor(int i, bool useFeature = false)
 {
-    const Eigen::Vector3f color(1.0, 0.5, 0.2);
-    defaultColors[i] = std::vector<Eigen::Vector3f>(meshes[i].faces.size());
-    for (FaceCIter f = meshes[i].faces.begin(); f != meshes[i].faces.end(); f++) {
-        defaultColors[i][f->index] = color;
+    colors[i] = std::vector<Eigen::Vector3f>(meshes[i].vertices.size());
+    for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
+        if (useFeature) {
+            double f = computedDescriptor ? v->feature(t) : 0.0;
+            colors[i][v->index] = Eigen::Vector3f(f, 0.0, 0.0);
+        
+        } else {
+            colors[i][v->index] = defaultColor;
+        }
+    }
+}
+
+void updateColor()
+{
+    for (int i = 0; i < (int)meshes.size(); i++) {
+        if (showDescriptor) setColor(i, true);
+        else setColor(i);
+        glMeshes[i].update(colors[i]);
     }
 }
 
@@ -115,8 +136,8 @@ void init()
     for (int i = 0; i < (int)meshes.size(); i++) {
         if (!meshes[i].read(paths[i])) success = false;
         if (success) {
-            setDefaultColors(i);
-            glMeshes[i].setup(defaultColors[i]);
+            setColor(i);
+            glMeshes[i].setup(colors[i]);
         }
     }
     
@@ -222,6 +243,18 @@ void keyboardPressed(unsigned char key, int x, int y)
     } else if (keys[DIGIT_OFFSET + 2]) {
         showWireframe = !showWireframe;
     
+    } else if (keys[DIGIT_OFFSET + 3]) {
+        showDescriptor = !showDescriptor;
+        updateColor();
+        
+        std::string title = "Mesh Correspondence";
+        if (showDescriptor) title += ", t: " + std::to_string(t);
+        glutSetWindowTitle(title.c_str());
+    
+    } else if (keys[DIGIT_OFFSET + 4]) {
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
+        computedDescriptor = true;
+        
     } else if (keys['a']) {
         camera.processKeyboard(LEFT, dt);
         
@@ -245,6 +278,25 @@ void keyboardPressed(unsigned char key, int x, int y)
 void keyboardReleased(unsigned char key, int x, int y)
 {
     if (key != ESCAPE) keys[key] = false;
+}
+
+void special(int i, int x, int y)
+{
+    switch (i) {
+        case GLUT_KEY_LEFT:
+            t--;
+            if (t < 0) t = (int)meshes[0].vertices[0].feature.size() - 1;
+            break;
+        case GLUT_KEY_RIGHT:
+            t++;
+            int n = std::max(0, (int)meshes[0].vertices[0].feature.size() - 1);
+            if (t > n) t = 0;
+            break;
+    }
+    updateColor();
+    
+    std::string title = "Mesh Correspondence, t: " + std::to_string(t);
+    glutSetWindowTitle(title.c_str());
 }
 
 void mouse(int x, int y)
@@ -278,7 +330,7 @@ int main(int argc, char** argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_3_2_CORE_PROFILE | GLUT_MULTISAMPLE);
     glutInitWindowSize(gridX, gridY);
-    glutCreateWindow("Project Name");
+    glutCreateWindow("Mesh Correspondence");
     
     init();
     
@@ -286,6 +338,7 @@ int main(int argc, char** argv)
     glutIdleFunc(idle);
     glutKeyboardFunc(keyboardPressed);
     glutKeyboardUpFunc(keyboardReleased);
+    glutSpecialFunc(special);
     glutMotionFunc(mouse);
     glutMainLoop();
     

@@ -14,6 +14,9 @@ public:
     // uv coords
     Eigen::Vector2d uv;
     
+    // feature
+    Eigen::VectorXd feature;
+    
     // id between 0 and |V|-1
     int index;
            
@@ -28,6 +31,9 @@ public:
     
     // returns angle weighted vertex normal
     Eigen::Vector3d normal() const;
+    
+    // returns area of barycentric dual cell associated with the vertex
+    double dualArea() const;
 };
 
 #endif

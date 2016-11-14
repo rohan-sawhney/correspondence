@@ -372,6 +372,37 @@ bool MeshIO::read(std::ifstream& in, Mesh& mesh)
     return buildMesh(data, mesh);
 }
 
+void MeshIO::readEig(std::ifstream& in, Eigen::VectorXd& evals, Eigen::MatrixXd& evecs)
+{
+    int m = 0;
+    int n = 0;
+    
+    int i = 0;
+    std::string line;
+    while(getline(in, line)) {
+        std::stringstream ss(line);
+        
+        if (i == 0) {
+            ss >> m;
+            evals.resize(m);
+        
+        } else if (i == 1) {
+            ss >> n;
+            evecs.resize(m, n);
+            
+        } else if (i < n+2) {
+            ss >> evals(i-2);
+        
+        } else {
+            for (int j = 0; j < n; j++) {
+                ss >> evecs(i-n-2, j);
+            }
+        }
+        
+        i++;
+    }
+}
+
 void MeshIO::write(std::ofstream& out, const Mesh& mesh)
 {
     // write vertices and uvs
@@ -426,5 +457,22 @@ void MeshIO::write(std::ofstream& out, const Mesh& mesh)
         
         out << std::endl;
         index ++;
+    }
+}
+
+void MeshIO::writeEig(std::ofstream& out, Eigen::VectorXd& evals, Eigen::MatrixXd& evecs)
+{
+    int m = (int)evecs.rows(); out << m << std::endl;
+    int n = (int)evecs.cols(); out << n << std::endl;
+    
+    // write eigenvalues
+    for (int i = 0; i < n; i++) out << evals(i) << std::endl;
+    
+    // write eigenvectors
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            out << evecs(i, j) << " ";
+        }
+        out << std::endl;
     }
 }
