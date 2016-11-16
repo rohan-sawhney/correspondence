@@ -384,10 +384,10 @@ void MeshIO::readEig(std::ifstream& in, Eigen::VectorXd& evals, Eigen::MatrixXd&
         
         if (i == 0) {
             ss >> m;
-            evals.resize(m);
         
         } else if (i == 1) {
             ss >> n;
+            evals.resize(n);
             evecs.resize(m, n);
             
         } else if (i < n+2) {

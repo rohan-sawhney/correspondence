@@ -41,7 +41,7 @@ bool Mesh::write(const std::string& fileName) const
 
 void Mesh::computeDescriptor(int descriptorName)
 {
-    descriptor.compute(20, descriptorName);
+    descriptor.compute(10, descriptorName);
 }
 
 void Mesh::normalize()

@@ -54,6 +54,9 @@ void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
     if (in.is_open()) {
         // read eigvalues and eigenvectors from file
         MeshIO::readEig(in, evals, evecs);
+        std::cout << "Finished loading "
+                  << evals.size()
+                  << " eigenvalues and eigenvectors" << std::endl;
     
     } else {
         Spectra::SparseSymMatProd<double> opL(L);
@@ -76,6 +79,9 @@ void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
         // write eigvalues and eigenvectors to file
         std::ofstream out(filename);
         if (out.is_open()) MeshIO::writeEig(out, evals, evecs);
+        std::cout << "Finished computing "
+                  << k
+                  << " eigenvalues and eigenvectors" << std::endl;
     }
 }
 
@@ -89,16 +95,13 @@ void Descriptor::setup(Mesh *mesh0, int k0)
     // build laplace operator
     Eigen::SparseMatrix<double> L(v, v);
     buildLaplace(L);
-    std::cout << "Finished building laplacian operator" << std::endl;
     
     // build area matrix
     Eigen::SparseMatrix<double> A(v, v);
     buildAreaMatrix(A);
-    std::cout << "Finished building area matrix" << std::endl;
     
     // compute eigenvectors and eigenvalues
     computeEig(L, A);
-    std::cout << "Finished computing " << k << " eigenvalues and eigenvectors" << std::endl;
 }
 
 void Descriptor::computeHks(int n)
@@ -116,7 +119,7 @@ void Descriptor::computeHks(int n)
             
             for (int i = 0; i < n; i++) {
                 v->feature(i) += phi2*exp(-evals(j)*t);
-                t += exp(step);
+                t += step;
             }
         }
     }
