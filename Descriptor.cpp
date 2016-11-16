@@ -37,11 +37,15 @@ void Descriptor::buildAreaMatrix(Eigen::SparseMatrix<double>& A)
 {
     std::vector<Eigen::Triplet<double>> ATriplets;
     
+    double sum = 0.0;
     for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        ATriplets.push_back(Eigen::Triplet<double>(v->index, v->index, v->dualArea()));
+        double area = v->dualArea();
+        ATriplets.push_back(Eigen::Triplet<double>(v->index, v->index, area));
+        sum += area;
     }
     
     A.setFromTriplets(ATriplets.begin(), ATriplets.end());
+    A /= sum;
 }
 
 void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
@@ -83,6 +87,9 @@ void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
                   << k
                   << " eigenvalues and eigenvectors" << std::endl;
     }
+
+    Eigen::MatrixXd err = L*evecs - A*evecs*evals.asDiagonal();
+    std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
 }
 
 void Descriptor::setup(Mesh *mesh0, int k0)
@@ -108,7 +115,7 @@ void Descriptor::computeHks(int n)
 {
     double ln = 4*log(10);
     double tmin = ln/evals(0);
-    double step = (log(ln/evals(k-2)) - log(tmin)) / n;
+    double step = (ln/evals(k-2) - tmin) / n;
     
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
         v->feature = Eigen::VectorXd::Zero(n);
@@ -116,11 +123,51 @@ void Descriptor::computeHks(int n)
         for (int j = k-2; j >= 0; j--) {
             double phi2 = evecs(v->index, j)*evecs(v->index, j);
             double t = tmin;
+            double factor = 0.5;
             
             for (int i = 0; i < n; i++) {
                 v->feature(i) += phi2*exp(-evals(j)*t);
-                t += step;
+                t += factor*step;
+                
+                // take larger steps with increasing t to bias ts towards high frequency features
+                factor += 0.1;
             }
+        }
+    }
+}
+
+void Descriptor::computeWks(int n)
+{
+    Eigen::VectorXd logE(k);
+    for (int i = 0; i < k; i++) logE(i) = log(evals(i));
+    double emin = logE(k-2);
+    double emax = logE(0)/1.02;
+    double step = (emax - emin) / n;
+    double sigma22 = 2*pow(7*(emax - emin) / k, 2);
+ 
+    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        v->feature = Eigen::VectorXd::Zero(n);
+        Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
+
+        for (int j = 0; j < k-1; j++) {
+            double phi2 = evecs(v->index, j)*evecs(v->index, j);
+            double e = emin;
+            double factor = 1.5;
+            
+            for (int i = 0; i < n; i++) {
+                double exponent = exp(-pow(e - logE(j), 2) / sigma22);
+                v->feature(i) += phi2*exponent;
+                C(i) += exponent;
+                e += factor*step;
+                
+                // take smaller steps with increasing e to bias es towards high frequency features
+                factor -= 0.1;
+            }
+        }
+        
+        // normalize
+        for (int i = 0; i < n; i++) {
+            v->feature(i) /= C(i);
         }
     }
 }
@@ -146,6 +193,7 @@ void Descriptor::compute(int n, int descriptorName)
 {
     // compute descriptor
     if (descriptorName == HKS) computeHks(n);
+    else if (descriptorName == WKS) computeWks(n);
     
     // normalize
     normalize();

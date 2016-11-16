@@ -89,6 +89,7 @@ void printInstructions()
               << "2: toggle wireframe\n"
               << "3: toggle descriptor\n"
               << "4: compute hks\n"
+              << "5: compute wks\n"
               << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
@@ -254,6 +255,12 @@ void keyboardPressed(unsigned char key, int x, int y)
     } else if (keys[DIGIT_OFFSET + 4]) {
         for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
         computedDescriptor = true;
+        updateColor();
+        
+    } else if (keys[DIGIT_OFFSET + 5]) {
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
+        computedDescriptor = true;
+        updateColor();
         
     } else if (keys['a']) {
         camera.processKeyboard(LEFT, dt);

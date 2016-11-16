@@ -3,6 +3,7 @@
 
 #include "Types.h"
 #define HKS 0
+#define WKS 1
 
 class Descriptor {
 public:
@@ -28,6 +29,9 @@ private:
     
     // compute hks
     void computeHks(int n);
+    
+    // compute wks
+    void computeWks(int n);
     
     // normalize
     void normalize();

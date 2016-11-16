@@ -2,6 +2,7 @@
 #include "Mesh.h"
 #include <set>
 #include <map>
+#include <iomanip>
 
 class Index {
 public:
@@ -466,12 +467,12 @@ void MeshIO::writeEig(std::ofstream& out, Eigen::VectorXd& evals, Eigen::MatrixX
     int n = (int)evecs.cols(); out << n << std::endl;
     
     // write eigenvalues
-    for (int i = 0; i < n; i++) out << evals(i) << std::endl;
+    for (int i = 0; i < n; i++) out << std::setprecision(8) << evals(i) << std::endl;
     
     // write eigenvectors
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            out << evecs(i, j) << " ";
+            out << std::setprecision(8) << evecs(i, j) << " ";
         }
         out << std::endl;
     }
