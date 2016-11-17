@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
+#include "PatchMatch.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -237,7 +238,11 @@ void keyboardPressed(unsigned char key, int x, int y)
     if (keys[ESCAPE]) {
         reset();
         exit(0);
-    
+        
+    } else if (keys[' ']) {
+        PatchMatch pm(&meshes[0], &meshes[1]);
+        pm.compute(100);
+        
     } else if (keys[DIGIT_OFFSET + 1]) {
         showNormals = !showNormals;
         
