@@ -103,7 +103,7 @@ void setColor(int i, bool useFeature = false)
     colors[i] = std::vector<Eigen::Vector3f>(meshes[i].vertices.size());
     for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
         if (useFeature) {
-            double f = computedDescriptor ? v->feature(t) : 0.0;
+            double f = computedDescriptor ? v->descriptor(t) : 0.0;
             colors[i][v->index] = Eigen::Vector3f(f, 0.0, 0.0);
         
         } else {
@@ -292,11 +292,11 @@ void special(int i, int x, int y)
     switch (i) {
         case GLUT_KEY_LEFT:
             t--;
-            if (t < 0) t = (int)meshes[0].vertices[0].feature.size() - 1;
+            if (t < 0) t = (int)meshes[0].vertices[0].descriptor.size() - 1;
             break;
         case GLUT_KEY_RIGHT:
             t++;
-            int n = std::max(0, (int)meshes[0].vertices[0].feature.size() - 1);
+            int n = std::max(0, (int)meshes[0].vertices[0].descriptor.size() - 1);
             if (t > n) t = 0;
             break;
     }

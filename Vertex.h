@@ -15,7 +15,7 @@ public:
     Eigen::Vector2d uv;
     
     // feature
-    Eigen::VectorXd feature;
+    Eigen::VectorXd descriptor;
     
     // id between 0 and |V|-1
     int index;

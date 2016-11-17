@@ -115,7 +115,7 @@ void Descriptor::computeHks(int n)
     double step = (ln/evals(k-2) - tmin) / n;
     
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        v->feature = Eigen::VectorXd::Zero(n);
+        v->descriptor = Eigen::VectorXd::Zero(n);
         Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
         
         for (int j = k-2; j >= 0; j--) {
@@ -125,7 +125,7 @@ void Descriptor::computeHks(int n)
             
             for (int i = 0; i < n; i++) {
                 double exponent = exp(-evals(j)*t);
-                v->feature(i) += phi2*exponent;
+                v->descriptor(i) += phi2*exponent;
                 C(i) += exponent;
                 t += factor*step;
                 
@@ -136,7 +136,7 @@ void Descriptor::computeHks(int n)
         
         // normalize
         for (int i = 0; i < n; i++) {
-            v->feature(i) /= C(i);
+            v->descriptor(i) /= C(i);
         }
     }
 }
@@ -151,7 +151,7 @@ void Descriptor::computeWks(int n)
     double sigma22 = 2*pow(7*(emax - emin) / k, 2);
  
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        v->feature = Eigen::VectorXd::Zero(n);
+        v->descriptor = Eigen::VectorXd::Zero(n);
         Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
 
         for (int j = 0; j < k-1; j++) {
@@ -161,7 +161,7 @@ void Descriptor::computeWks(int n)
             
             for (int i = 0; i < n; i++) {
                 double exponent = exp(-pow(e - logE(j), 2) / sigma22);
-                v->feature(i) += phi2*exponent;
+                v->descriptor(i) += phi2*exponent;
                 C(i) += exponent;
                 e += factor*step;
                 
@@ -172,25 +172,25 @@ void Descriptor::computeWks(int n)
         
         // normalize
         for (int i = 0; i < n; i++) {
-            v->feature(i) /= C(i);
+            v->descriptor(i) /= C(i);
         }
     }
 }
 
 void Descriptor::normalize()
 {
-    int n = (int)mesh->vertices[0].feature.size();
+    int n = (int)mesh->vertices[0].descriptor.size();
     for (int i = 0; i < n; i++) {
         // compute min and max
         double min = 0.0, max = 0.0;
         for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-            min = std::min(min, v->feature(i));
-            max = std::max(max, v->feature(i));
+            min = std::min(min, v->descriptor(i));
+            max = std::max(max, v->descriptor(i));
         }
         
         // normalize
         for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-            v->feature(i) = (v->feature(i) - min) / (max - min);
+            v->descriptor(i) = (v->descriptor(i) - min) / (max - min);
         }
     }
 }
