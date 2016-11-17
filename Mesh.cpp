@@ -22,6 +22,7 @@ bool Mesh::read(const std::string& fileName)
         descriptor.setup(this, 100);
     }
     
+    in.close();
     return readSuccessful;
 }
 
@@ -36,6 +37,7 @@ bool Mesh::write(const std::string& fileName) const
     
     MeshIO::write(out, *this);
     
+    out.close();
     return false;
 }
 

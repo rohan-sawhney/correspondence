@@ -51,43 +51,23 @@ void Descriptor::buildAreaMatrix(Eigen::SparseMatrix<double>& A)
 void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
                             const Eigen::SparseMatrix<double>& A)
 {
-    std::string filename = mesh->name;
-    filename.replace(filename.find_last_of(".")+1, 3, "eig");
-    std::ifstream in(filename);
+    Spectra::SparseSymMatProd<double> opL(L);
+    Spectra::SparseCholesky<double> opA(A);
     
-    if (in.is_open()) {
-        // read eigvalues and eigenvectors from file
-        MeshIO::readEig(in, evals, evecs);
-        std::cout << "Finished loading "
-                  << evals.size()
-                  << " eigenvalues and eigenvectors" << std::endl;
+    Spectra::SymGEigsSolver<double,
+    Spectra::SMALLEST_MAGN,
+    Spectra::SparseSymMatProd<double>,
+    Spectra::SparseCholesky<double>,
+    Spectra::GEIGS_CHOLESKY> geigs(&opL, &opA, k, 2*k);
     
-    } else {
-        Spectra::SparseSymMatProd<double> opL(L);
-        Spectra::SparseCholesky<double> opA(A);
-        
-        Spectra::SymGEigsSolver<double,
-        Spectra::SMALLEST_MAGN,
-        Spectra::SparseSymMatProd<double>,
-        Spectra::SparseCholesky<double>,
-        Spectra::GEIGS_CHOLESKY> geigs(&opL, &opA, k, 2*k);
-        
-        geigs.init();
-        geigs.compute();
-        
-        if (geigs.info() == Spectra::SUCCESSFUL) {
-            evals = geigs.eigenvalues();
-            evecs = geigs.eigenvectors();
-        }
-        
-        // write eigvalues and eigenvectors to file
-        std::ofstream out(filename);
-        if (out.is_open()) MeshIO::writeEig(out, evals, evecs);
-        std::cout << "Finished computing "
-                  << k
-                  << " eigenvalues and eigenvectors" << std::endl;
+    geigs.init();
+    geigs.compute();
+    
+    if (geigs.info() == Spectra::SUCCESSFUL) {
+        evals = geigs.eigenvalues();
+        evecs = geigs.eigenvectors();
     }
-
+    
     Eigen::MatrixXd err = L*evecs - A*evecs*evals.asDiagonal();
     std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
 }
@@ -97,18 +77,35 @@ void Descriptor::setup(Mesh *mesh0, int k0)
     mesh = mesh0;
     k = k0;
     
-    int v = (int)mesh->vertices.size();
+    std::string filename = mesh->name;
+    filename.replace(filename.find_last_of(".")+1, 3, "eig");
+    std::ifstream in(filename);
     
-    // build laplace operator
-    Eigen::SparseMatrix<double> L(v, v);
-    buildLaplace(L);
+    if (in.is_open()) {
+        // read eigvalues and eigenvectors from file
+        MeshIO::readEig(in, evals, evecs);
+        
+    } else {
+        int v = (int)mesh->vertices.size();
+        
+        // build laplace operator
+        Eigen::SparseMatrix<double> L(v, v);
+        buildLaplace(L);
+        
+        // build area matrix
+        Eigen::SparseMatrix<double> A(v, v);
+        buildAreaMatrix(A);
+        
+        // compute eigenvectors and eigenvalues
+        computeEig(L, A);
+        
+        // write eigvalues and eigenvectors to file
+        std::ofstream out(filename);
+        if (out.is_open()) MeshIO::writeEig(out, evals, evecs);
+        out.close();
+    }
     
-    // build area matrix
-    Eigen::SparseMatrix<double> A(v, v);
-    buildAreaMatrix(A);
-    
-    // compute eigenvectors and eigenvalues
-    computeEig(L, A);
+    in.close();
 }
 
 void Descriptor::computeHks(int n)
