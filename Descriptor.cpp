@@ -116,6 +116,7 @@ void Descriptor::computeHks(int n)
     
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
         v->feature = Eigen::VectorXd::Zero(n);
+        Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
         
         for (int j = k-2; j >= 0; j--) {
             double phi2 = evecs(v->index, j)*evecs(v->index, j);
@@ -123,12 +124,19 @@ void Descriptor::computeHks(int n)
             double factor = 0.5;
             
             for (int i = 0; i < n; i++) {
-                v->feature(i) += phi2*exp(-evals(j)*t);
+                double exponent = exp(-evals(j)*t);
+                v->feature(i) += phi2*exponent;
+                C(i) += exponent;
                 t += factor*step;
                 
                 // take larger steps with increasing t to bias ts towards high frequency features
                 factor += 0.1;
             }
+        }
+        
+        // normalize
+        for (int i = 0; i < n; i++) {
+            v->feature(i) /= C(i);
         }
     }
 }
@@ -173,15 +181,16 @@ void Descriptor::normalize()
 {
     int n = (int)mesh->vertices[0].feature.size();
     for (int i = 0; i < n; i++) {
-        // compute max
-        double max = 0.0;
+        // compute min and max
+        double min = 0.0, max = 0.0;
         for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+            min = std::min(min, v->feature(i));
             max = std::max(max, v->feature(i));
         }
         
         // normalize
         for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-            v->feature(i) /= max;
+            v->feature(i) = (v->feature(i) - min) / (max - min);
         }
     }
 }
