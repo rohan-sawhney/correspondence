@@ -1,6 +1,7 @@
 #include "Vertex.h"
 #include "HalfEdge.h"
 #include "Face.h"
+#include <queue>
 
 std::vector<HalfEdge> isolated;
 
@@ -71,4 +72,45 @@ double Vertex::dualArea() const
     } while (h != he);
     
     return area / 3.0;
+}
+
+bool Vertex::isFeature(int t, int depth)
+{
+    std::queue<Vertex *> queue;
+    std::unordered_map<int, bool> visited;
+    
+    // enqueue
+    queue.push(this);
+    queue.push(NULL);
+    visited[index] = true;
+    int levels = 0;
+    
+    // perform bfs
+    while (!queue.empty()) {
+        Vertex *v = queue.front();
+        queue.pop();
+        
+        if (v == NULL) {
+            levels++;
+            queue.push(NULL);
+            if (queue.front() == NULL || levels == depth) break;
+            
+        } else {
+            HalfEdgeCIter h = v->he;
+            do {
+                Vertex *vn = &(*h->flip->vertex);
+                if (!visited[vn->index]) {
+                    // check if descriptor value for a particular t is greater than the neighbor's value
+                    if (descriptor(t) < vn->descriptor(t)) return false;
+                    
+                    queue.push(vn);
+                    visited[vn->index] = true;
+                }
+                
+                h = h->flip->next;
+            } while (h != v->he);
+        }
+    }
+    
+    return true;
 }

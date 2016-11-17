@@ -39,6 +39,7 @@ bool success = true;
 bool showNormals = false;
 bool showWireframe = false;
 bool showDescriptor = false;
+bool showFeaturePoints = false;
 bool computedDescriptor = false;
 
 void setupShaders()
@@ -89,8 +90,9 @@ void printInstructions()
     std::cerr << "1: toggle normals\n"
               << "2: toggle wireframe\n"
               << "3: toggle descriptor\n"
-              << "4: compute hks\n"
-              << "5: compute wks\n"
+              << "4: toggle feature points\n"
+              << "5: compute hks\n"
+              << "6: compute wks\n"
               << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
@@ -99,17 +101,12 @@ void printInstructions()
               << std::endl;
 }
 
-void setColor(int i, bool useFeature = false)
+void setColor(int i, bool useDescriptor = false)
 {
     colors[i] = std::vector<Eigen::Vector3f>(meshes[i].vertices.size());
     for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-        if (useFeature) {
-            double f = computedDescriptor ? v->descriptor(t) : 0.0;
-            colors[i][v->index] = Eigen::Vector3f(f, 0.0, 0.0);
-        
-        } else {
-            colors[i][v->index] = defaultColor;
-        }
+        if (useDescriptor) colors[i][v->index] = Eigen::Vector3f(v->descriptor(t), 0.0, 0.0);
+        else colors[i][v->index] = defaultColor;
     }
 }
 
@@ -251,21 +248,27 @@ void keyboardPressed(unsigned char key, int x, int y)
     
     } else if (keys[DIGIT_OFFSET + 3]) {
         showDescriptor = !showDescriptor;
-        updateColor();
+        if (showDescriptor && !computedDescriptor) showDescriptor = false;
+        else {
+            updateColor();
+            
+            std::string title = "Mesh Correspondence";
+            if (showDescriptor) title += ", t: " + std::to_string(t);
+            glutSetWindowTitle(title.c_str());
+        }
         
-        std::string title = "Mesh Correspondence";
-        if (showDescriptor) title += ", t: " + std::to_string(t);
-        glutSetWindowTitle(title.c_str());
-    
     } else if (keys[DIGIT_OFFSET + 4]) {
+        showFeaturePoints = !showFeaturePoints;
+    
+    } else if (keys[DIGIT_OFFSET + 5]) {
         for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
         computedDescriptor = true;
-        updateColor();
+        if (showDescriptor) updateColor();
         
-    } else if (keys[DIGIT_OFFSET + 5]) {
+    } else if (keys[DIGIT_OFFSET + 6]) {
         for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
         computedDescriptor = true;
-        updateColor();
+        if (showDescriptor) updateColor();
         
     } else if (keys['a']) {
         camera.processKeyboard(LEFT, dt);
@@ -305,7 +308,7 @@ void special(int i, int x, int y)
             if (t > n) t = 0;
             break;
     }
-    updateColor();
+    if (showDescriptor) updateColor();
     
     std::string title = "Mesh Correspondence, t: " + std::to_string(t);
     glutSetWindowTitle(title.c_str());

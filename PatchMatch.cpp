@@ -8,6 +8,7 @@ mesh2(mesh20),
 distribution1(0, (int)mesh1->vertices.size()-1),
 distribution2(0, (int)mesh2->vertices.size()-1)
 {
+    // TODO: compare regularly sampled geodesic fans 
     for (VertexCIter v1 = mesh1->vertices.begin(); v1 != mesh1->vertices.end(); v1++) {
         correspondenceMap[v1->index] = distribution2(generator);
     }

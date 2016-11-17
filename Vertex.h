@@ -34,6 +34,9 @@ public:
     
     // returns area of barycentric dual cell associated with the vertex
     double dualArea() const;
+    
+    // checks if vertex is a feature
+    bool isFeature(int t, int depth);
 };
 
 #endif
