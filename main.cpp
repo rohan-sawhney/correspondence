@@ -17,6 +17,7 @@ std::string shaderPath;
 Shader meshShader;
 Shader normalShader;
 Shader wireframeShader;
+Shader pointShader;
 
 Camera camera;
 int t = 0;
@@ -28,6 +29,9 @@ bool firstMouse = true;
 
 std::vector<Mesh> meshes = {Mesh(), Mesh()};
 std::vector<GLMesh> glMeshes = {GLMesh(meshes[0]), GLMesh(meshes[1])};
+
+std::vector<std::unordered_map<int, bool>> featureMaps(2);
+std::vector<std::vector<GLPoint>> glPoints(2);
 
 const Eigen::Vector3f defaultColor(1.0, 0.5, 0.2);
 std::vector<std::vector<Eigen::Vector3f>> colors(meshes.size());
@@ -47,6 +51,7 @@ void setupShaders()
     meshShader.setup(shaderPath, "Model.vert", "", "Model.frag");
     normalShader.setup(shaderPath, "Normal.vert", "Normal.geom", "Normal.frag");
     wireframeShader.setup(shaderPath, "Wireframe.vert", "", "Wireframe.frag");
+    pointShader.setup(shaderPath, "Point.vert", "", "Point.frag");
 }
 
 void setupUniformBlocks()
@@ -55,11 +60,13 @@ void setupUniformBlocks()
     GLuint meshShaderIndex = glGetUniformBlockIndex(meshShader.program, "Transform");
     GLuint normalShaderIndex = glGetUniformBlockIndex(normalShader.program, "Transform");
     GLuint wireframeShaderIndex = glGetUniformBlockIndex(wireframeShader.program, "Transform");
+    GLuint pointShaderIndex = glGetUniformBlockIndex(pointShader.program, "Transform");
     
     // bind
     glUniformBlockBinding(meshShader.program, meshShaderIndex, 0);
     glUniformBlockBinding(normalShader.program, normalShaderIndex, 0);
     glUniformBlockBinding(wireframeShader.program, wireframeShaderIndex, 0);
+    glUniformBlockBinding(pointShader.program, pointShaderIndex, 0);
     
     // add transform data
     glGenBuffers(1, &transformUbo);
@@ -137,6 +144,11 @@ void init()
         if (success) {
             setColor(i);
             glMeshes[i].setup(colors[i]);
+            
+            for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
+                glPoints[i].push_back(GLPoint(v->position.cast<float>()));
+                glPoints[i][v->index].setup();
+            }
         }
     }
     
@@ -169,17 +181,27 @@ void uploadMeshTransform(const Eigen::Matrix4f& transform)
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void draw(GLMesh& m)
+void draw(int m)
 {
-    m.draw(meshShader);
-    if (showNormals) m.draw(normalShader);
+    // draw mesh
+    glMeshes[m].draw(meshShader);
+    if (showNormals) glMeshes[m].draw(normalShader);
     if (showWireframe) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glDepthMask(GL_FALSE);
-        m.draw(wireframeShader);
+        glMeshes[m].draw(wireframeShader);
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
+    }
+    
+    // draw points
+    if (computedDescriptor && showFeaturePoints) {
+        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
+            if (featureMaps[m][v->index]) {
+                glPoints[m][v->index].draw(pointShader);
+            }
+        }
     }
 }
 
@@ -202,11 +224,11 @@ void display()
         // draw
         Eigen::Matrix4f transform = Eigen::Matrix4f::Identity(); transform(0, 3) = -1.0;
         uploadMeshTransform(transform);
-        draw(glMeshes[0]);
+        draw(0);
         
         transform(0, 3) = 1.0;
         uploadMeshTransform(transform);
-        draw(glMeshes[1]);
+        draw(1);
         
         // swap
         glutSwapBuffers();
@@ -220,12 +242,29 @@ void idle()
 
 void reset()
 {
-    for (int i = 1; i < (int)glMeshes.size(); i++) glMeshes[i].reset();
+    for (int i = 0; i < (int)glMeshes.size(); i++) {
+        glMeshes[i].reset();
+        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
+            glPoints[i][v->index].reset();
+        }
+    }
+    
     meshShader.reset();
     normalShader.reset();
     wireframeShader.reset();
+    pointShader.reset();
     glDeleteBuffers(1, &transformUbo);
     glDeleteBuffers(1, &lightUbo);
+}
+
+void setFeaturePoints()
+{
+    for (int i = 0; i < 2; i++) {
+        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
+            if (v->isFeature(t)) featureMaps[i][v->index] = true;
+            else featureMaps[i][v->index] = false;
+        }
+    }
 }
 
 void keyboardPressed(unsigned char key, int x, int y)
@@ -263,11 +302,13 @@ void keyboardPressed(unsigned char key, int x, int y)
     } else if (keys[DIGIT_OFFSET + 5]) {
         for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
         computedDescriptor = true;
+        setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 6]) {
         for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
         computedDescriptor = true;
+        setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys['a']) {
@@ -308,6 +349,7 @@ void special(int i, int x, int y)
             if (t > n) t = 0;
             break;
     }
+    setFeaturePoints();
     if (showDescriptor) updateColor();
     
     std::string title = "Mesh Correspondence, t: " + std::to_string(t);

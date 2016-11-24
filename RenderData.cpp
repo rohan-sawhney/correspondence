@@ -93,3 +93,45 @@ void GLMesh::reset()
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
 }
+
+GLPoint::GLPoint(const Eigen::Vector3f& point0):
+point(point0),
+vao(0),
+vbo(0)
+{
+    
+}
+
+void GLPoint::setup()
+{
+    // bind vao
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    
+    // bind vbo
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Eigen::Vector3f), point.data(), GL_STATIC_DRAW);
+    
+    // set vertex attribute pointers for vbo data
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLVertex), (GLvoid*)0);
+    
+    // unbind vao
+    glBindVertexArray(0);
+}
+
+void GLPoint::draw(Shader& shader) const
+{
+    shader.use();
+    glPointSize(4.0);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_POINTS, 0, 1);
+    glBindVertexArray(0);
+}
+
+void GLPoint::reset()
+{
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+}

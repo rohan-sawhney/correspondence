@@ -42,4 +42,27 @@ private:
     GLuint vbo;
 };
 
+class GLPoint {
+public:
+    // constructor
+    GLPoint(const Eigen::Vector3f& point0);
+    
+    // setup
+    void setup();
+    
+    // draw
+    void draw(Shader& shader) const;
+    
+    // reset
+    void reset();
+    
+    // member variables
+    Eigen::Vector3f point;
+    
+private:
+    // member variables
+    GLuint vao;
+    GLuint vbo;
+};
+
 #endif

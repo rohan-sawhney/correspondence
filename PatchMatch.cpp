@@ -65,7 +65,7 @@ void PatchMatch::propogate()
 void PatchMatch::performRandomSearch()
 {
     for (VertexCIter v1 = mesh1->vertices.begin(); v1 != mesh1->vertices.end(); v1++) {
-        for (int i = 0; i < 10; i++) { // TODO: sample points within a decreasing radius
+        for (int i = 0; i < 10; i++) { // TODO: sample points within decreasing radii
             VertexCIter v2rand = mesh2->vertices.begin() + distribution2(generator);
             updateCorrespondence(v1, v2rand);
         }

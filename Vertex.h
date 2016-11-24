@@ -36,7 +36,7 @@ public:
     double dualArea() const;
     
     // checks if vertex is a feature
-    bool isFeature(int t, int depth);
+    bool isFeature(int t, int depth = 2) const;
 };
 
 #endif

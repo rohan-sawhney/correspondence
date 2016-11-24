@@ -74,9 +74,9 @@ double Vertex::dualArea() const
     return area / 3.0;
 }
 
-bool Vertex::isFeature(int t, int depth)
+bool Vertex::isFeature(int t, int depth) const
 {
-    std::queue<Vertex *> queue;
+    std::queue<const Vertex *> queue;
     std::unordered_map<int, bool> visited;
     
     // enqueue
@@ -87,7 +87,7 @@ bool Vertex::isFeature(int t, int depth)
     
     // perform bfs
     while (!queue.empty()) {
-        Vertex *v = queue.front();
+        const Vertex *v = queue.front();
         queue.pop();
         
         if (v == NULL) {
@@ -98,7 +98,7 @@ bool Vertex::isFeature(int t, int depth)
         } else {
             HalfEdgeCIter h = v->he;
             do {
-                Vertex *vn = &(*h->flip->vertex);
+                const Vertex *vn = &(*h->flip->vertex);
                 if (!visited[vn->index]) {
                     // check if descriptor value for a particular t is greater than the neighbor's value
                     if (descriptor(t) < vn->descriptor(t)) return false;
