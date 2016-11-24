@@ -12,6 +12,9 @@ public:
     // compute
     void compute(int iter);
     
+    // member variable
+    std::unordered_map<int, int> correspondenceMap;
+    
 private:
     // update correspondece
     void updateCorrespondence(VertexCIter v1, VertexCIter v2cand);
@@ -28,7 +31,6 @@ private:
     // member variables
     Mesh *mesh1;
     Mesh *mesh2;
-    std::unordered_map<int, int> correspondenceMap;
     std::default_random_engine generator;
     std::uniform_int_distribution<int> distribution1, distribution2;
 };

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+#include <queue>
 #include <unordered_map>
 #include <iostream>
 #include "math.h"

@@ -1,6 +1,5 @@
 #include "PatchMatch.h"
 #include "Mesh.h"
-#include <queue>
 
 PatchMatch::PatchMatch(Mesh *mesh10, Mesh *mesh20):
 mesh1(mesh10),
@@ -78,10 +77,4 @@ void PatchMatch::compute(int iter)
         propogate();
         performRandomSearch();
     }
-    
-    int exactMatches = 0;
-    for (auto& kv: correspondenceMap) {
-        if (kv.first == kv.second) exactMatches++;
-    }
-    std::cout << "Exact Matches: " << exactMatches << std::endl;
 }

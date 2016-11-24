@@ -1,7 +1,6 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
-#include "PatchMatch.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -94,18 +93,29 @@ void setupUniformBlocks()
 
 void printInstructions()
 {
-    std::cerr << "1: toggle normals\n"
-              << "2: toggle wireframe\n"
+    std::cerr << "1: compute hks\n"
+              << "2: compute wks\n"
               << "3: toggle descriptor\n"
               << "4: toggle feature points\n"
-              << "5: compute hks\n"
-              << "6: compute wks\n"
+              << "5: generate patches\n"
+              << "6: toggle normals\n"
+              << "7: toggle wireframe\n"
               << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
               << "e/q: move up/down\n"
               << "escape: exit program\n"
               << std::endl;
+}
+
+void setFeaturePoints()
+{
+    for (int i = 0; i < 2; i++) {
+        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
+            if (v->isFeature(t)) featureMaps[i][v->index] = true;
+            else featureMaps[i][v->index] = false;
+        }
+    }
 }
 
 void setColor(int i, bool useDescriptor = false)
@@ -123,6 +133,86 @@ void updateColor()
         if (showDescriptor) setColor(i, true);
         else setColor(i);
         glMeshes[i].update(colors[i]);
+    }
+}
+
+void generatePatchColors(std::vector<Eigen::Vector3f>& patchColors)
+{
+    for (int i = 0; i < (int)patchColors.size(); i++) {
+        patchColors[i].x() = (double)rand() / RAND_MAX;
+        patchColors[i].y() = (double)rand() / RAND_MAX;
+        patchColors[i].z() = (double)rand() / RAND_MAX;
+    }
+}
+
+bool terminate(const std::vector<std::queue<VertexCIter>>& queues)
+{
+    bool allEmpty = true;
+    for (int q = 0; q < (int)queues.size(); q++) {
+        if (!queues[q].empty()) allEmpty = false;
+    }
+    
+    return allEmpty;
+}
+
+void setPatchColors()
+{
+    for (int m = 0; m < 2; m++) {
+        int p = 0;
+        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
+            if (featureMaps[m][v->index]) p++;
+        }
+        
+        std::unordered_map<int, bool> visited;
+        std::vector<std::queue<VertexCIter>> queues(p);
+        std::vector<int> levels(p, 0);
+        std::vector<Eigen::Vector3f> patchColors(p);
+        generatePatchColors(patchColors);
+        VertexCIter end = meshes[m].vertices.end();
+        
+        // initialize 
+        int i = 0;
+        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
+            if (featureMaps[m][v->index]) {
+                visited[v->index] = true;
+                colors[m][v->index] = patchColors[i];
+                queues[i].push(v);
+                queues[i].push(end);
+                i++;
+            }
+        }
+        
+        // perform bfs
+        i = 0;
+        while (!terminate(queues)) {
+            while (queues[i].empty()) i = (i+1) % p;
+            VertexCIter v = queues[i].front();
+            queues[i].pop();
+            
+            if (v == end) {
+                levels[i]++;
+                queues[i].push(end);
+                if (queues[i].front() == end) queues[i].pop();
+                i = (i+1) % p;
+                
+            } else {
+                HalfEdgeCIter h = v->he;
+                do {
+                    VertexCIter vn = h->flip->vertex;
+                    if (!visited[vn->index]) {
+                        colors[m][vn->index] = patchColors[i];
+                        
+                        queues[i].push(vn);
+                        visited[vn->index] = true;
+                    }
+                    
+                    h = h->flip->next;
+                } while (h != v->he);
+            }
+        }
+        
+        // update
+        glMeshes[m].update(colors[m]);
     }
 }
 
@@ -257,16 +347,6 @@ void reset()
     glDeleteBuffers(1, &lightUbo);
 }
 
-void setFeaturePoints()
-{
-    for (int i = 0; i < 2; i++) {
-        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-            if (v->isFeature(t)) featureMaps[i][v->index] = true;
-            else featureMaps[i][v->index] = false;
-        }
-    }
-}
-
 void keyboardPressed(unsigned char key, int x, int y)
 {
     keys[key] = true;
@@ -275,16 +355,18 @@ void keyboardPressed(unsigned char key, int x, int y)
         reset();
         exit(0);
         
-    } else if (keys[' ']) {
-        PatchMatch pm(&meshes[0], &meshes[1]);
-        pm.compute(100);
-        
     } else if (keys[DIGIT_OFFSET + 1]) {
-        showNormals = !showNormals;
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
+        computedDescriptor = true;
+        setFeaturePoints();
+        if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 2]) {
-        showWireframe = !showWireframe;
-    
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
+        computedDescriptor = true;
+        setFeaturePoints();
+        if (showDescriptor) updateColor();
+        
     } else if (keys[DIGIT_OFFSET + 3]) {
         showDescriptor = !showDescriptor;
         if (showDescriptor && !computedDescriptor) showDescriptor = false;
@@ -298,18 +380,15 @@ void keyboardPressed(unsigned char key, int x, int y)
         
     } else if (keys[DIGIT_OFFSET + 4]) {
         showFeaturePoints = !showFeaturePoints;
-    
+        
     } else if (keys[DIGIT_OFFSET + 5]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        if (computedDescriptor) setPatchColors();
         
     } else if (keys[DIGIT_OFFSET + 6]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        showNormals = !showNormals;
+        
+    } else if (keys[DIGIT_OFFSET + 7]) {
+        showWireframe = !showWireframe;
         
     } else if (keys['a']) {
         camera.processKeyboard(LEFT, dt);

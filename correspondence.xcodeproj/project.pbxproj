@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		323C90401DD8E3FA005DCCDB /* Descriptor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C903E1DD8E3FA005DCCDB /* Descriptor.cpp */; };
-		323D6FAE1DDD5C650066523C /* PatchMatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323D6FAC1DDD5C650066523C /* PatchMatch.cpp */; };
 		328A3BCD1DD6BF08000ADE17 /* Camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BB91DD6BF08000ADE17 /* Camera.cpp */; };
 		328A3BCE1DD6BF08000ADE17 /* Edge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BBB1DD6BF08000ADE17 /* Edge.cpp */; };
 		328A3BCF1DD6BF08000ADE17 /* Face.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BBD1DD6BF08000ADE17 /* Face.cpp */; };
@@ -38,8 +37,6 @@
 /* Begin PBXFileReference section */
 		323C903E1DD8E3FA005DCCDB /* Descriptor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Descriptor.cpp; sourceTree = "<group>"; };
 		323C903F1DD8E3FA005DCCDB /* Descriptor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Descriptor.h; sourceTree = "<group>"; };
-		323D6FAC1DDD5C650066523C /* PatchMatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PatchMatch.cpp; sourceTree = "<group>"; };
-		323D6FAD1DDD5C650066523C /* PatchMatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PatchMatch.h; sourceTree = "<group>"; };
 		328A3BAF1DD6BE9E000ADE17 /* correspondence */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = correspondence; sourceTree = BUILT_PRODUCTS_DIR; };
 		328A3BB91DD6BF08000ADE17 /* Camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Camera.cpp; sourceTree = "<group>"; };
 		328A3BBA1DD6BF08000ADE17 /* Camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Camera.h; sourceTree = "<group>"; };
@@ -92,8 +89,6 @@
 				328A3BC11DD6BF08000ADE17 /* main.cpp */,
 				328A3BC21DD6BF08000ADE17 /* Mesh.cpp */,
 				328A3BC31DD6BF08000ADE17 /* Mesh.h */,
-				323D6FAC1DDD5C650066523C /* PatchMatch.cpp */,
-				323D6FAD1DDD5C650066523C /* PatchMatch.h */,
 				323C903E1DD8E3FA005DCCDB /* Descriptor.cpp */,
 				323C903F1DD8E3FA005DCCDB /* Descriptor.h */,
 				328A3BC41DD6BF08000ADE17 /* MeshIO.cpp */,
@@ -192,7 +187,6 @@
 				328A3BD01DD6BF08000ADE17 /* HalfEdge.cpp in Sources */,
 				328A3BCE1DD6BF08000ADE17 /* Edge.cpp in Sources */,
 				328A3BD11DD6BF08000ADE17 /* main.cpp in Sources */,
-				323D6FAE1DDD5C650066523C /* PatchMatch.cpp in Sources */,
 				323C90401DD8E3FA005DCCDB /* Descriptor.cpp in Sources */,
 				328A3BD31DD6BF08000ADE17 /* MeshIO.cpp in Sources */,
 				328A3BCD1DD6BF08000ADE17 /* Camera.cpp in Sources */,

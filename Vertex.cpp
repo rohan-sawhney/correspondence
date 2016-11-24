@@ -1,7 +1,6 @@
 #include "Vertex.h"
 #include "HalfEdge.h"
 #include "Face.h"
-#include <queue>
 
 std::vector<HalfEdge> isolated;
 
