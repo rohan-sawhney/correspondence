@@ -428,7 +428,7 @@ void special(int i, int x, int y)
             if (t > n) t = 0;
             break;
     }
-    setFeaturePoints();
+    if (computedDescriptor) setFeaturePoints();
     if (showDescriptor) updateColor();
     
     std::string title = "Mesh Correspondence, t: " + std::to_string(t);
