@@ -1,6 +1,7 @@
 #include "RenderData.h"
+#include "Mesh.h"
 
-GLMesh::GLMesh(Mesh& mesh0):
+GLMesh::GLMesh(Mesh *mesh0):
 mesh(mesh0),
 vao(0),
 vbo(0)
@@ -10,8 +11,8 @@ vbo(0)
 
 void GLMesh::fillBuffers(const std::vector<Eigen::Vector3f>& colors)
 {
-    vertices.resize(3*(mesh.faces.size() - mesh.boundaries.size()));
-    for (FaceCIter f = mesh.faces.begin(); f != mesh.faces.end(); f++) {
+    vertices.resize(3*(mesh->faces.size() - mesh->boundaries.size()));
+    for (FaceCIter f = mesh->faces.begin(); f != mesh->faces.end(); f++) {
         if (!f->isBoundary()) {
             int i = 0;
             int fIdx = 3*f->index;

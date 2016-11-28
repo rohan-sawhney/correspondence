@@ -27,7 +27,7 @@ bool keys[256];
 bool firstMouse = true;
 
 std::vector<Mesh> meshes = {Mesh(), Mesh()};
-std::vector<GLMesh> glMeshes = {GLMesh(meshes[0]), GLMesh(meshes[1])};
+std::vector<GLMesh> glMeshes = {GLMesh(&meshes[0]), GLMesh(&meshes[1])};
 
 std::vector<std::unordered_map<int, bool>> featureMaps(2);
 std::vector<std::vector<GLPoint>> glPoints(2);
