@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
+#include "MultiresMesh.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -407,6 +408,10 @@ void keyboardPressed(unsigned char key, int x, int y)
         
     } else if (keys['q']) {
         camera.processKeyboard(DOWN, dt);
+    
+    } else if (keys[' ']) {
+        MultiresMesh mrm(&meshes[0], 2, 1000);
+        mrm.build();
     }
 }
 

@@ -418,9 +418,9 @@ void MeshIO::write(std::ofstream& out, const Mesh& mesh)
         out << "f ";
         int j = 0;
         do {
-            out << he->vertex->index << "/"
-                << he->vertex->index << "/"
-                << he->vertex->index << " ";
+            out << he->vertex->index+1 << "/"
+                << he->vertex->index+1 << "/"
+                << he->vertex->index+1 << " ";
             j++;
             
             he = he->next;

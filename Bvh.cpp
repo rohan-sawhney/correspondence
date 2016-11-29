@@ -23,6 +23,7 @@ struct TraversalEntry {
 
 Bvh::Bvh(Mesh *mesh0, const int& leafSize0):
 mesh(mesh0),
+faces(mesh->faces.size()),
 nodeCount(0),
 leafCount(0),
 leafSize(leafSize0)
@@ -32,7 +33,11 @@ leafSize(leafSize0)
 
 void Bvh::build()
 {
-    int faceCount = (int)mesh->faces.size();
+    for (FaceCIter f = mesh->faces.begin(); f != mesh->faces.end(); f++) {
+        faces[f->index] = *f;
+    }
+    
+    int faceCount = (int)faces.size();
     
     NodeEntry nodeEntry;
     nodeEntry.parentId = -1;
@@ -57,11 +62,11 @@ void Bvh::build()
         node.rightOffset = 2;
         
         // calculate bounding box
-        BoundingBox bbox(mesh->faces[startId].boundingBox());
-        BoundingBox centroid(mesh->faces[startId].centroid());
+        BoundingBox bbox(faces[startId].boundingBox());
+        BoundingBox centroid(faces[startId].centroid());
         for (int i = startId+1; i < endId; i++) {
-            bbox.expandToInclude(mesh->faces[i].boundingBox());
-            centroid.expandToInclude(mesh->faces[i].centroid());
+            bbox.expandToInclude(faces[i].boundingBox());
+            centroid.expandToInclude(faces[i].centroid());
         }
         node.boundingBox = bbox;
         
@@ -92,8 +97,8 @@ void Bvh::build()
         // partition faces
         int mid = startId;
         for (int i = startId; i < endId; i++) {
-            if (mesh->faces[i].centroid()[maxDimension] < splitCoord) {
-                std::swap(mesh->faces[i], mesh->faces[mid]);
+            if (faces[i].centroid()[maxDimension] < splitCoord) {
+                std::swap(faces[i], faces[mid]);
                 mid++;
             }
         }
@@ -117,7 +122,7 @@ void Bvh::build()
     }
 }
 
-int Bvh::getIntersection(double hit, Eigen::Vector3d& p,
+int Bvh::getIntersection(double& hit, Eigen::Vector3d& p,
                          const Eigen::Vector3d& o, const Eigen::Vector3d& d) const
 {
     int idx = 0;
@@ -139,12 +144,10 @@ int Bvh::getIntersection(double hit, Eigen::Vector3d& p,
         const Node &node(flatTree[idx]);
         if (node.rightOffset == 0) { // node is a leaf
             for (int i = 0; i < node.range; i++) {
-                const Face& f(mesh->faces[node.startId+i]);
-                if (f.isBoundary()) continue;
-                
+                const Face& f(faces[node.startId+i]);
                 double dist = f.intersect(o, d);
                 if (dist < hit) {
-                    index = node.startId + i;
+                    index = f.index;
                     p = o + dist*d;
                     hit = dist;
                 }

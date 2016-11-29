@@ -20,12 +20,13 @@ public:
     void build();
     
     // returns face index
-    int getIntersection(double hit, Eigen::Vector3d& p,
+    int getIntersection(double& hit, Eigen::Vector3d& p,
                         const Eigen::Vector3d& o, const Eigen::Vector3d& d) const;
     
 private:
     // member variables
     Mesh *mesh;
+    std::vector<Face> faces;
     int nodeCount, leafCount, leafSize;
     std::vector<Node> flatTree;
 };

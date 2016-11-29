@@ -34,8 +34,11 @@ private:
     // builds mesh from decimated oMesh
     void buildMesh(Mesh *mesh);
     
-    // decimate
+    // decimates
     Mesh* decimate(int v);
+    
+    // projects mesh1 onto mesh2
+    void project(Mesh *mesh1, Mesh *mesh2);
     
     // Member variables
     std::vector<Mesh *> lods;
