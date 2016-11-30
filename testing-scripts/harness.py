@@ -1,18 +1,39 @@
 # General purpose harness to run and evaluate algorithms for shape descriptors
 
-import os, argparse
-
+import os, argparse, subprocess, time
+from timeit import default_timer as timer
 
 ### Wrappers to evaluate each of the algorithms.
-# Should return a wall clock time in milliseconds in addition to writing output files
+# Should return a wall clock time in seconds in addition to writing output files
 
 def eval_strawman(inputFile, outputFile):
 
-    return 7
+    methodLocation = "../methods/strawman/strawman-features.py"
+  
+    # Start timing 
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen(["python", methodLocation, inputFile, outputFile])
+    runner.wait()
+    
+    # Finish timing 
+    elapsedTime = timer() - startTime
+
+    return elapsedTime
 
 
 def eval_HKS():
     pass
+
+
+### Helpers
+def prettyPrintTime(elapsed):
+
+    hours, rem = divmod(elapsed, 3600)
+    minutes, seconds = divmod(rem, 60)
+
+    return "{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds)
 
 
 
@@ -49,8 +70,6 @@ def main():
 
 
     #### Run algorithms ####
-    # TODO respect 'force' flag
-    # TODO accumulate timings
     for dataset in datasets:
 
         # Run each method
@@ -96,7 +115,7 @@ def main():
 
                 inFile = fullname
 
-                print("Processing file " + str(name))
+                print("\nProcessing file " + str(name))
                 print("  infile " + str(inFile))
 
                 print("  Using method " + method)
@@ -105,9 +124,12 @@ def main():
                 print("    outfile " + str(outFile))
            
                 elapsedTime = methodFunctions[method](inFile, outFile)
-                print("    elapsed time: " + str(elapsedTime) + " ms.")
+                print("    elapsed time: " + prettyPrintTime(elapsedTime))
 
                 timingsFile.write(name + "," + str(elapsedTime) + "\n")
+
+
+
 
     #### Evaluate accuracy ####
 
