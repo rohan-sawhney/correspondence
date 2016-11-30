@@ -2,6 +2,7 @@
 #define FACE_H
 
 #include "Types.h"
+#include "BoundingBox.h"
 
 class Face {
 public:
@@ -22,6 +23,15 @@ public:
     
     // returns face area
     double area() const;
+    
+    // returns centroid
+    Eigen::Vector3d centroid() const;
+    
+    // returns bounding box
+    BoundingBox boundingBox() const;
+    
+    // perform ray triangle intersection
+    double intersect(const Eigen::Vector3d& o, const Eigen::Vector3d& d) const;
 };
 
 #endif

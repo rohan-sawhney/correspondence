@@ -1,6 +1,7 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
+#include "MultiresMesh.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -27,7 +28,7 @@ bool keys[256];
 bool firstMouse = true;
 
 std::vector<Mesh> meshes = {Mesh(), Mesh()};
-std::vector<GLMesh> glMeshes = {GLMesh(meshes[0]), GLMesh(meshes[1])};
+std::vector<GLMesh> glMeshes = {GLMesh(&meshes[0]), GLMesh(&meshes[1])};
 
 std::vector<std::unordered_map<int, bool>> featureMaps(2);
 std::vector<std::vector<GLPoint>> glPoints(2);
@@ -407,6 +408,10 @@ void keyboardPressed(unsigned char key, int x, int y)
         
     } else if (keys['q']) {
         camera.processKeyboard(DOWN, dt);
+    
+    } else if (keys[' ']) {
+        MultiresMesh mrm(&meshes[0], 2, 1000);
+        mrm.build();
     }
 }
 
@@ -428,7 +433,7 @@ void special(int i, int x, int y)
             if (t > n) t = 0;
             break;
     }
-    setFeaturePoints();
+    if (computedDescriptor) setFeaturePoints();
     if (showDescriptor) updateColor();
     
     std::string title = "Mesh Correspondence, t: " + std::to_string(t);

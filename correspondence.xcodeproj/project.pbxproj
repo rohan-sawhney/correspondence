@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		323C90401DD8E3FA005DCCDB /* Descriptor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 323C903E1DD8E3FA005DCCDB /* Descriptor.cpp */; };
+		3273B4B91DECCFAF00C3CA7D /* libOpenMeshTools.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 32EA2FFA1DEB6A1200275FD7 /* libOpenMeshTools.a */; };
+		3273B4BA1DECCFAF00C3CA7D /* libOpenMeshCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 32EA2FFB1DEB6A1200275FD7 /* libOpenMeshCore.a */; };
 		328A3BCD1DD6BF08000ADE17 /* Camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BB91DD6BF08000ADE17 /* Camera.cpp */; };
 		328A3BCE1DD6BF08000ADE17 /* Edge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BBB1DD6BF08000ADE17 /* Edge.cpp */; };
 		328A3BCF1DD6BF08000ADE17 /* Face.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BBD1DD6BF08000ADE17 /* Face.cpp */; };
@@ -20,16 +22,20 @@
 		328A3BD61DD6BF08000ADE17 /* Vertex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 328A3BCB1DD6BF08000ADE17 /* Vertex.cpp */; };
 		328A3BD91DD6BF65000ADE17 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 328A3BD81DD6BF64000ADE17 /* OpenGL.framework */; };
 		328A3BDB1DD6BF6A000ADE17 /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 328A3BDA1DD6BF6A000ADE17 /* GLUT.framework */; };
+		32E56F721DECFBF7002024C2 /* BoundingBox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32E56F701DECFBF7002024C2 /* BoundingBox.cpp */; };
+		32E56F751DED01B9002024C2 /* Bvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32E56F731DED01B9002024C2 /* Bvh.cpp */; };
+		32EA30001DEB6CDA00275FD7 /* MultiresMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 32EA2FFE1DEB6CDA00275FD7 /* MultiresMesh.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		328A3BAD1DD6BE9D000ADE17 /* CopyFiles */ = {
+		328A3BAD1DD6BE9D000ADE17 /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
 			dstSubfolderSpec = 0;
 			files = (
 			);
+			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -60,6 +66,14 @@
 		328A3BCC1DD6BF08000ADE17 /* Vertex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Vertex.h; sourceTree = "<group>"; };
 		328A3BD81DD6BF64000ADE17 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		328A3BDA1DD6BF6A000ADE17 /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = System/Library/Frameworks/GLUT.framework; sourceTree = SDKROOT; };
+		32E56F701DECFBF7002024C2 /* BoundingBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BoundingBox.cpp; sourceTree = "<group>"; };
+		32E56F711DECFBF7002024C2 /* BoundingBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BoundingBox.h; sourceTree = "<group>"; };
+		32E56F731DED01B9002024C2 /* Bvh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Bvh.cpp; sourceTree = "<group>"; };
+		32E56F741DED01B9002024C2 /* Bvh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Bvh.h; sourceTree = "<group>"; };
+		32EA2FFA1DEB6A1200275FD7 /* libOpenMeshTools.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOpenMeshTools.a; path = deps/openmesh/lib/libOpenMeshTools.a; sourceTree = "<group>"; };
+		32EA2FFB1DEB6A1200275FD7 /* libOpenMeshCore.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOpenMeshCore.a; path = deps/openmesh/lib/libOpenMeshCore.a; sourceTree = "<group>"; };
+		32EA2FFE1DEB6CDA00275FD7 /* MultiresMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MultiresMesh.cpp; sourceTree = "<group>"; };
+		32EA2FFF1DEB6CDA00275FD7 /* MultiresMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MultiresMesh.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +81,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3273B4B91DECCFAF00C3CA7D /* libOpenMeshTools.a in Frameworks */,
+				3273B4BA1DECCFAF00C3CA7D /* libOpenMeshCore.a in Frameworks */,
 				328A3BDB1DD6BF6A000ADE17 /* GLUT.framework in Frameworks */,
 				328A3BD91DD6BF65000ADE17 /* OpenGL.framework in Frameworks */,
 			);
@@ -78,6 +94,10 @@
 		328A3BA61DD6BE9D000ADE17 = {
 			isa = PBXGroup;
 			children = (
+				32E56F701DECFBF7002024C2 /* BoundingBox.cpp */,
+				32E56F711DECFBF7002024C2 /* BoundingBox.h */,
+				32E56F731DED01B9002024C2 /* Bvh.cpp */,
+				32E56F741DED01B9002024C2 /* Bvh.h */,
 				328A3BB91DD6BF08000ADE17 /* Camera.cpp */,
 				328A3BBA1DD6BF08000ADE17 /* Camera.h */,
 				328A3BBB1DD6BF08000ADE17 /* Edge.cpp */,
@@ -89,6 +109,8 @@
 				328A3BC11DD6BF08000ADE17 /* main.cpp */,
 				328A3BC21DD6BF08000ADE17 /* Mesh.cpp */,
 				328A3BC31DD6BF08000ADE17 /* Mesh.h */,
+				32EA2FFE1DEB6CDA00275FD7 /* MultiresMesh.cpp */,
+				32EA2FFF1DEB6CDA00275FD7 /* MultiresMesh.h */,
 				323C903E1DD8E3FA005DCCDB /* Descriptor.cpp */,
 				323C903F1DD8E3FA005DCCDB /* Descriptor.h */,
 				328A3BC41DD6BF08000ADE17 /* MeshIO.cpp */,
@@ -116,6 +138,8 @@
 		328A3BD71DD6BF64000ADE17 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				32EA2FFA1DEB6A1200275FD7 /* libOpenMeshTools.a */,
+				32EA2FFB1DEB6A1200275FD7 /* libOpenMeshCore.a */,
 				328A3BDA1DD6BF6A000ADE17 /* GLUT.framework */,
 				328A3BD81DD6BF64000ADE17 /* OpenGL.framework */,
 			);
@@ -131,7 +155,7 @@
 			buildPhases = (
 				328A3BAB1DD6BE9D000ADE17 /* Sources */,
 				328A3BAC1DD6BE9D000ADE17 /* Frameworks */,
-				328A3BAD1DD6BE9D000ADE17 /* CopyFiles */,
+				328A3BAD1DD6BE9D000ADE17 /* Copy Files */,
 			);
 			buildRules = (
 			);
@@ -181,12 +205,15 @@
 			files = (
 				328A3BD21DD6BF08000ADE17 /* Mesh.cpp in Sources */,
 				328A3BD61DD6BF08000ADE17 /* Vertex.cpp in Sources */,
+				32EA30001DEB6CDA00275FD7 /* MultiresMesh.cpp in Sources */,
 				328A3BD51DD6BF08000ADE17 /* Shader.cpp in Sources */,
 				328A3BD41DD6BF08000ADE17 /* RenderData.cpp in Sources */,
 				328A3BCF1DD6BF08000ADE17 /* Face.cpp in Sources */,
 				328A3BD01DD6BF08000ADE17 /* HalfEdge.cpp in Sources */,
 				328A3BCE1DD6BF08000ADE17 /* Edge.cpp in Sources */,
+				32E56F751DED01B9002024C2 /* Bvh.cpp in Sources */,
 				328A3BD11DD6BF08000ADE17 /* main.cpp in Sources */,
+				32E56F721DECFBF7002024C2 /* BoundingBox.cpp in Sources */,
 				323C90401DD8E3FA005DCCDB /* Descriptor.cpp in Sources */,
 				328A3BD31DD6BF08000ADE17 /* MeshIO.cpp in Sources */,
 				328A3BCD1DD6BF08000ADE17 /* Camera.cpp in Sources */,
@@ -287,6 +314,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = "/Users/rohansawhney/Desktop/developer/C++/correspondence/deps";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/deps/openmesh/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -295,6 +326,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = "/Users/rohansawhney/Desktop/developer/C++/correspondence/deps";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/deps/openmesh/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

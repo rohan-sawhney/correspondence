@@ -2,7 +2,7 @@
 #define RENDER_DATA_H
 
 #include "Shader.h"
-#include "Mesh.h"
+#include "Types.h"
 
 struct GLVertex {
     Eigen::Vector3f position;
@@ -15,7 +15,7 @@ struct GLVertex {
 class GLMesh {
 public:
     // constructor
-    GLMesh(Mesh& mesh0);
+    GLMesh(Mesh *mesh0);
     
     // setup
     void setup(const std::vector<Eigen::Vector3f>& colors);
@@ -31,7 +31,7 @@ public:
     
     // member variables
     std::vector<GLVertex> vertices;
-    Mesh& mesh;
+    Mesh *mesh;
 
 private:
     // fills buffers
