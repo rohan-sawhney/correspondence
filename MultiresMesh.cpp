@@ -2,6 +2,8 @@
 #include "Mesh.h"
 #include "MeshIO.h"
 #include "Bvh.h"
+#include <future>
+#include <functional>
 #define _USE_MATH_DEFINES
 #include <openmesh/Tools/Decimater/DecimaterT.hh>
 #include <openmesh/Tools/Decimater/ModQuadricT.hh>
@@ -110,9 +112,6 @@ Mesh* MultiresMesh::decimate(int v)
     return NULL;
 }
 
-#include <future>
-#include <functional>
-
 void MultiresMesh::project(Mesh *mesh1, Mesh *mesh2)
 {
     // build bvh
@@ -150,4 +149,18 @@ void MultiresMesh::build()
 
         i++;
     }
+}
+
+int MultiresMesh::numLods()
+{
+    return (int)lods.size();
+}
+
+Mesh* MultiresMesh::lod(int l)
+{
+    if (l >= 0 && l < (int)lods.size()) {
+        return lods[l];
+    }
+    
+    return NULL;
 }

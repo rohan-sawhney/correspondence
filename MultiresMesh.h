@@ -27,6 +27,12 @@ public:
     // build
     void build();
     
+    // returns lod count
+    int numLods();
+    
+    // returns l'th lod
+    Mesh* lod(int l);
+    
 private:
     // loads mesh into oMesh
     void buildOMesh(Mesh *mesh);

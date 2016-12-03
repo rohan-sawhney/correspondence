@@ -1,16 +1,19 @@
 #include "Descriptor.h"
 #include "Mesh.h"
 #include "MeshIO.h"
+#include "MultiresMesh.h"
 #include <spectra/include/MatOp/SparseSymMatProd.h>
 #include <spectra/include/MatOp/SparseCholesky.h>
 #include <spectra/include/SymGEigsSolver.h>
+#define K 100
+#define N 10
 
 Descriptor::Descriptor()
 {
     
 }
 
-void Descriptor::buildLaplace(Eigen::SparseMatrix<double>& L)
+void buildLaplace(Mesh *mesh, Eigen::SparseMatrix<double>& L)
 {
     std::vector<Eigen::Triplet<double>> LTriplets;
     
@@ -33,7 +36,7 @@ void Descriptor::buildLaplace(Eigen::SparseMatrix<double>& L)
     L.setFromTriplets(LTriplets.begin(), LTriplets.end());
 }
 
-void Descriptor::buildAreaMatrix(Eigen::SparseMatrix<double>& A)
+void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A)
 {
     std::vector<Eigen::Triplet<double>> ATriplets;
     
@@ -45,7 +48,7 @@ void Descriptor::buildAreaMatrix(Eigen::SparseMatrix<double>& A)
     }
     
     A.setFromTriplets(ATriplets.begin(), ATriplets.end());
-    A /= sum;
+    A *= mesh->vertices.size() / sum;
 }
 
 void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
@@ -58,7 +61,7 @@ void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
     Spectra::SMALLEST_MAGN,
     Spectra::SparseSymMatProd<double>,
     Spectra::SparseCholesky<double>,
-    Spectra::GEIGS_CHOLESKY> geigs(&opL, &opA, k, 2*k);
+    Spectra::GEIGS_CHOLESKY> geigs(&opL, &opA, K, 2*K);
     
     geigs.init();
     geigs.compute();
@@ -72,10 +75,9 @@ void Descriptor::computeEig(const Eigen::SparseMatrix<double>& L,
     std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
 }
 
-void Descriptor::setup(Mesh *mesh0, int k0)
+void Descriptor::setup(Mesh *mesh0)
 {
     mesh = mesh0;
-    k = k0;
     
     std::string filename = mesh->name;
     filename.replace(filename.find_last_of(".")+1, 3, "eig");
@@ -90,11 +92,11 @@ void Descriptor::setup(Mesh *mesh0, int k0)
         
         // build laplace operator
         Eigen::SparseMatrix<double> L(v, v);
-        buildLaplace(L);
+        buildLaplace(mesh, L);
         
         // build area matrix
         Eigen::SparseMatrix<double> A(v, v);
-        buildAreaMatrix(A);
+        buildAreaMatrix(mesh, A);
         
         // compute eigenvectors and eigenvalues
         computeEig(L, A);
@@ -108,22 +110,22 @@ void Descriptor::setup(Mesh *mesh0, int k0)
     in.close();
 }
 
-void Descriptor::computeHks(int n)
+void Descriptor::computeHks()
 {
-    double ln = 4*log(10);
-    double tmin = ln/evals(0);
-    double step = (ln/evals(k-2) - tmin) / n;
+    const double ln = 4*log(10);
+    const double tmin = ln/evals(0);
+    const double step = (ln/evals(K-2) - tmin) / N;
     
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        v->descriptor = Eigen::VectorXd::Zero(n);
-        Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
+        v->descriptor = Eigen::VectorXd::Zero(N);
+        Eigen::VectorXd C = Eigen::VectorXd::Zero(N);
         
-        for (int j = k-2; j >= 0; j--) {
+        for (int j = K-2; j >= 0; j--) {
             double phi2 = evecs(v->index, j)*evecs(v->index, j);
             double t = tmin;
             double factor = 0.5;
             
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < N; i++) {
                 double exponent = exp(-evals(j)*t);
                 v->descriptor(i) += phi2*exponent;
                 C(i) += exponent;
@@ -135,31 +137,78 @@ void Descriptor::computeHks(int n)
         }
         
         // normalize
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < N; i++) {
             v->descriptor(i) /= C(i);
         }
     }
 }
 
-void Descriptor::computeWks(int n)
+void Descriptor::extrapolateEvals(double& xhat, double& yhat, double& m)
 {
-    Eigen::VectorXd logE(k);
-    for (int i = 0; i < k; i++) logE(i) = log(evals(i));
-    double emin = logE(k-2);
-    double emax = logE(0)/1.02;
-    double step = (emax - emin) / n;
-    double sigma22 = 2*pow(7*(emax - emin) / k, 2);
+    // compute averages
+    xhat = 0.0; yhat = 0.0;
+    for (int i = 0; i < K; i++) {
+        xhat += i;
+        yhat += evals(i);
+    }
+    xhat /= K; yhat /= K;
+    
+    // compute slope
+    double den = 0.0; m = 0.0;
+    for (int i = 0; i < K; i++) {
+        m += (i - xhat)*(evals(i) - yhat);
+        den += (i - xhat)*(i - xhat);
+    }
+    m /= den;
+}
+
+void Descriptor::computeFastHks()
+{
+    const int d = 2;
+    const int C = 1000;
+    const double c = 0.2;
+    const double reps = 1e-4;
+    const std::vector<int> t = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+    
+    // extrapolate eigenvalues
+    double xhat, yhat, m;
+    extrapolateEvals(xhat, yhat, m);
+    
+    // build mutliresolution structure
+    MultiresMesh mrm(mesh, d, C);
+    mrm.build();
+    
+    for (int i = 0; i < (int)t.size(); i++) {
+        // choose coarsest resolution level l s.t. cn > r(t)
+        int r = 0, l = mrm.numLods()-1;
+        while (exp(-(yhat - m*(r - xhat))*t[i]) > reps) r++;
+        while (l > 0 && c*mrm.lod(l)->vertices.size() < r) l--;
+        
+        // TODO: compute sparse heat kernel on h
+        
+        // TODO: project sparse heat kernel on finest resolution level
+    }
+}
+
+void Descriptor::computeWks()
+{
+    Eigen::VectorXd logE(K);
+    for (int i = 0; i < K; i++) logE(i) = log(evals(i));
+    const double emin = logE(K-2);
+    const double emax = logE(0)/1.02;
+    const double step = (emax - emin) / N;
+    const double sigma22 = 2*pow(7*(emax - emin) / K, 2);
  
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        v->descriptor = Eigen::VectorXd::Zero(n);
-        Eigen::VectorXd C = Eigen::VectorXd::Zero(n);
+        v->descriptor = Eigen::VectorXd::Zero(N);
+        Eigen::VectorXd C = Eigen::VectorXd::Zero(N);
 
-        for (int j = 0; j < k-1; j++) {
+        for (int j = 0; j < K-1; j++) {
             double phi2 = evecs(v->index, j)*evecs(v->index, j);
             double e = emin;
             double factor = 1.5;
             
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < N; i++) {
                 double exponent = exp(-pow(e - logE(j), 2) / sigma22);
                 v->descriptor(i) += phi2*exponent;
                 C(i) += exponent;
@@ -171,7 +220,7 @@ void Descriptor::computeWks(int n)
         }
         
         // normalize
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < N; i++) {
             v->descriptor(i) /= C(i);
         }
     }
@@ -195,11 +244,12 @@ void Descriptor::normalize()
     }
 }
 
-void Descriptor::compute(int n, int descriptorName)
+void Descriptor::compute(int descriptorName)
 {
     // compute descriptor
-    if (descriptorName == HKS) computeHks(n);
-    else if (descriptorName == WKS) computeWks(n);
+    if (descriptorName == HKS) computeHks();
+    else if (descriptorName == FAST_HKS) computeFastHks();
+    else if (descriptorName == WKS) computeWks();
     
     // normalize
     normalize();
