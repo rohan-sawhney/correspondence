@@ -19,14 +19,11 @@ public:
     
 private:
     // compute eigenvalues and eigenvectors
-    void computeEig(const Eigen::SparseMatrix<double>& L,
+    void computeEig(const Eigen::SparseMatrix<double>& W,
                     const Eigen::SparseMatrix<double>& A);
     
     // compute hks
     void computeHks();
-    
-    // extrapolate eigenvalues
-    void extrapolateEvals(double& xhat, double& yhat, double& m);
     
     // compute fast hks
     void computeFastHks();

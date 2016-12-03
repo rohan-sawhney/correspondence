@@ -151,12 +151,12 @@ void MultiresMesh::build()
     }
 }
 
-int MultiresMesh::numLods()
+int MultiresMesh::numLods() const
 {
     return (int)lods.size();
 }
 
-Mesh* MultiresMesh::lod(int l)
+Mesh* MultiresMesh::lod(int l) const
 {
     if (l >= 0 && l < (int)lods.size()) {
         return lods[l];

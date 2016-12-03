@@ -28,10 +28,10 @@ public:
     void build();
     
     // returns lod count
-    int numLods();
+    int numLods() const;
     
     // returns l'th lod
-    Mesh* lod(int l);
+    Mesh* lod(int l) const;
     
 private:
     // loads mesh into oMesh
