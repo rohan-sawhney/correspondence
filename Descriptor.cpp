@@ -294,7 +294,7 @@ void Descriptor::computeFastHks()
         // 3. compute sparse heat kernel on l
         int v = (int)mrm.lod(l)->vertices.size();
         Eigen::SparseMatrix<double> Kt(v, v);
-        double t = 0.0, t1 = 0.05;
+        double t = 0.0, t1 = 0.05; // NOTE: I'm not sure if t1 is being set correctly 
         int s = 0;
         
         // compute Kt for small t
