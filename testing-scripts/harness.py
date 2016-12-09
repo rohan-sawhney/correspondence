@@ -37,6 +37,42 @@ def prettyPrintTime(elapsed):
 
 
 
+def parseGroupFile(filename):
+
+    print("Parsing group file " + filename)
+
+    groupLists = {}
+
+    with open(filename) as groupFile:
+        while True:
+
+            try:
+                line = next(groupFile).strip()
+            except:
+                break
+
+            if(line[0] == '#'): continue
+
+            # Must start with "GROUP:"
+            line = line[6:]
+
+            # Parse out name and count
+            items = line.split(",")
+            gName = items[0]
+            gCount = int(items[1])
+
+            # Accumulate the entries in the group
+            gList = []
+            for i in range(gCount):
+                line = next(groupFile)
+                gList.append(line.strip())
+                
+            groupLists[gName] = gList
+
+    print("Found " + str(len(groupLists)) + " groups")
+
+    return gList
+
 ### Primary method
 
 def main():
@@ -72,11 +108,21 @@ def main():
     #### Run algorithms ####
     for dataset in datasets:
 
+        # Handle directories for this dataset and method
+        datasetPath = os.path.join(dataRoot, dataset)
+
+        # Make sure that there is at least one obj file in the dataset
+        haveOBJ = False
+        for f in os.listdir(datasetPath):
+            if f.endswith(".obj"):
+                haveOBJ = True
+        if not haveOBJ:
+            print("ERROR: Found 0 obj files for dataset at " + datasetPath)
+            exit()
+
+
         # Run each method
         for method in methods:
-
-            ### Handle directories for this dataset and method
-            datasetPath = os.path.join(dataRoot, dataset)
 
             # Ensure the dataset directory exists
             if(not os.path.exists(datasetPath)):
@@ -133,6 +179,25 @@ def main():
 
     #### Evaluate accuracy ####
 
+    # TODO This code assumes that the ground truth correspondence has
+    # the implicit form of equally-numbered verticies matching up. This is
+    # just one possible way for a correspondence to be represented, and should
+    # be generalized.
+
+    for dataset in datasets:
+
+        # Handle directories for this dataset and method
+        datasetPath = os.path.join(dataRoot, dataset)
+
+        # Parse the file that tells us how the dataset is partitioned
+        # in to corresponding groups
+        groupFilename = os.path.join(datasetPath, "partitions.txt")
+        groupList = parseGroupFile(groupFilename)
+
+        # Evaluate each method
+        for method in methods:
+
+            # TODO generalize this for datasets that have
 
 
 
