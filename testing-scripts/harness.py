@@ -7,12 +7,13 @@ import numpy as np
 import scipy
 import scipy.interpolate
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Make the args globally available
 global args
 
 # Number of precision increments at which to compute precision-recall curve value
-nPRIncrements = 5000
+nPRIncrements = 500
 
 ### Wrappers to compute the result each of the algorithms.
 # Should return a wall clock time in seconds in addition to writing output files
@@ -124,7 +125,30 @@ def evaluateAllAccuracies(groupSet, featureDirectory, accuracyDirectory):
                 np.savetxt(resultFilename, pairwisePR[1], fmt="%.8f")
                  
 
-    return result
+
+def parseAccuracies(groupSet, accuracyDirectory):
+  
+    print("Reading all accuracies from  " + accuracyDirectory)
+
+    allAccuracies= []
+
+    for groupName in groupSet:
+   
+        group = groupSet[groupName]
+
+        for iGroup in range(len(group)):
+
+            # Evaluate the how well we matched the corresponding vertices for each pair in the group
+            for jGroup in range(len(group)):
+
+                if iGroup == jGroup: continue
+
+                resultFilename = os.path.join(accuracyDirectory, group[iGroup] + "-" + group[jGroup] + ".accuracy")
+                acc = np.loadtxt(resultFilename)
+                
+                allAccuracies.append(acc)
+
+    return allAccuracies
 
 
 # Compute the value of the PR curve at nPRIncrements points between [0,1]
@@ -144,6 +168,26 @@ def computePrecisionRecall(relativeIndexVals):
     recallSamples = interpolator(rankSamples)
 
     return (rankSamples, recallSamples)
+
+### Plotters
+
+def plotMethodAccuracy(methodName, accuracyLists, plotDir):
+
+    yData = np.array(accuracyLists)
+    xData = np.linspace(0, 1, num=nPRIncrements)
+
+    sns.set(font_scale=2) 
+    plt.title(methodName + " accuracy")
+    plt.xlabel("Threshold")
+    plt.ylabel("Fraction under threshold")
+
+    sns.tsplot(yData, xData, err_style="unit_traces", err_palette=sns.color_palette(["#ccd8ff"]))
+    # sns.tsplot(yData, xData, ci = [68,95,99.99])
+    # sns.tsplot(yData, xData, err_style="boot_traces", n_boot=500)
+
+    outname = plotDir + methodName + "-accuracy.pdf"
+    plt.savefig(outname)
+
 
 ### Helpers
 def prettyPrintTime(elapsed):
@@ -210,6 +254,7 @@ def main():
     dataRoot = os.path.join(root, "data/")
     featuresRoot = os.path.join(root, "features/")
     evaluateRoot = os.path.join(root, "accuracy/")
+    plotRoot = os.path.join(root, "plots/")
 
     # Build dataset lists
     # datasets = ["TOSCA","FAUST"]
@@ -326,8 +371,35 @@ def main():
 
 
     #### Generate plots ####
+   
+    # Make an accuracy plot for each dataset/method
+    for dataset in datasets:
+
+        # Handle directories for this dataset and method
+        datasetPath = os.path.join(dataRoot, dataset)
+
+        # Parse the file that tells us how the dataset is partitioned
+        # in to corresponding groups
+        groupFilename = os.path.join(datasetPath, "partitions.txt")
+        groupList = parseGroupFile(groupFilename)
+
+        methodAccuracies = {}
+
+        for method in methods:
+
+            evaluteDir = os.path.join(evaluateRoot, dataset, method)
+   
+            # Read in the evaluation results     
+            evalResults = parseAccuracies(groupList, evaluteDir)
+
+            # Make a plot of the evaluation results
+            plotMethodAccuracy(method, evalResults, plotRoot)       
+
+            # Accumulate to make a merged plot
 
 
+
+        # Make a combined plot for all methods
 
 
 if __name__ == "__main__":
