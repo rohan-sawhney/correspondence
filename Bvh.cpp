@@ -145,7 +145,7 @@ int Bvh::getIntersection(double& hit, Eigen::Vector3d& p, const Eigen::Vector3d&
                 Eigen::Vector3d q;
                 double dist = f.nearestPoint(q, o);
                 if (dist < hit) {
-                    index = node.startId + i;
+                    index = f.index;
                     p = q;
                     hit = dist;
                 } 
