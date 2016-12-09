@@ -4,6 +4,15 @@ import os, argparse, subprocess, time, random
 from timeit import default_timer as timer
 
 import numpy as np
+import scipy
+import scipy.interpolate
+import matplotlib.pyplot as plt
+
+# Make the args globally available
+global args
+
+# Number of precision increments at which to compute precision-recall curve value
+nPRIncrements = 5000
 
 ### Wrappers to compute the result each of the algorithms.
 # Should return a wall clock time in seconds in addition to writing output files
@@ -70,9 +79,8 @@ def evaluateAccuracy(featuresA, featuresB, subsampleRate = 1.0):
 
 # Performs all appropriate pairwise calls to evaluateAccuracy and returns
 # the merged result
-def evaluateAllAccuracies(groupSet, featureDirectory):
+def evaluateAllAccuracies(groupSet, featureDirectory, accuracyDirectory):
 
-    result = []
 
     for groupName in groupSet:
    
@@ -83,24 +91,59 @@ def evaluateAllAccuracies(groupSet, featureDirectory):
         for iGroup in range(len(group)):
 
             iFilename = os.path.join(featureDirectory, group[iGroup] + ".features")
-            iFeatures = parseFeatureFile(iFilename)
+            
 
+            # Evaluate the how well we matched the corresponding vertices for each pair in the group
             for jGroup in range(len(group)):
 
                 if iGroup == jGroup: continue
                 print("Evaluating pair: " + group[iGroup] + " and " + group[jGroup])
             
                 jFilename = os.path.join(featureDirectory, group[jGroup] + ".features")
-                jFeatures = parseFeatureFile(jFilename)
+
+                # The path to put the result at
+                resultFilename = os.path.join(accuracyDirectory, group[iGroup] + "-" + group[jGroup] + ".accuracy")
+                
+                # Skip computation if the file exists 
+                if(os.path.exists(resultFilename)):
+                    if(args.force):
+                        os.remove(resultFilename)
+                    else:
+                        print("Skipping accuracy computation for " + group[iGroup] + "---" + group[jGroup] + ", file already present")
+                        continue
+
 
                 # Assess the result
                 # NOTE THAT WE ARE SUBSAMPLING BY A LOT RIGHT NOW
-                pairwiseResult = evaluateAccuracy(iFeatures, jFeatures, 0.001)
-                result.append(pairwiseResult)
+                pairwiseResult = evaluateAccuracy(parseFeatureFile(iFilename), parseFeatureFile(jFilename), 0.001)
 
+                # Compute precision-recall samples 
+                pairwisePR = computePrecisionRecall(pairwiseResult)
+           
+                # Write the samples to file
+                np.savetxt(resultFilename, pairwisePR[1], fmt="%.8f")
+                 
 
     return result
 
+
+# Compute the value of the PR curve at nPRIncrements points between [0,1]
+def computePrecisionRecall(relativeIndexVals):
+
+    rankThreshold = np.array(sorted(relativeIndexVals))
+    recallPercent = np.linspace(0, 1, num=len(relativeIndexVals))
+
+    # Ensure we have the full range [0,1]
+    # TODO ugly use of appends
+    rankThreshold = np.append(np.append(np.array([0]), rankThreshold), np.array([1]))
+    recallPercent = np.append(np.append(np.array([0]), recallPercent), np.array([1]))
+
+    # Resample to regular values
+    interpolator = scipy.interpolate.interp1d(rankThreshold, recallPercent)
+    rankSamples = np.linspace(0, 1, num=nPRIncrements)
+    recallSamples = interpolator(rankSamples)
+
+    return (rankSamples, recallSamples)
 
 ### Helpers
 def prettyPrintTime(elapsed):
@@ -159,12 +202,14 @@ def main():
     parser.add_argument("root", help="Root path containing data and results")
     parser.add_argument("-f", "--force", help="Overwrite existing results", action="store_true")
 
+    global args
     args = parser.parse_args()
 
     # File location things
     root = args.root;
     dataRoot = os.path.join(root, "data/")
     featuresRoot = os.path.join(root, "features/")
+    evaluateRoot = os.path.join(root, "accuracy/")
 
     # Build dataset lists
     # datasets = ["TOSCA","FAUST"]
@@ -274,7 +319,8 @@ def main():
         for method in methods:
 
             featuresDir = os.path.join(featuresRoot, dataset, method)
-            evaluateAllAccuracies(groupList, featuresDir)
+            evaluteDir = os.path.join(evaluateRoot, dataset, method)
+            evaluateAllAccuracies(groupList, featuresDir, evaluteDir)
 
 
 
