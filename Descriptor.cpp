@@ -236,6 +236,11 @@ void Descriptor::computeFastHks()
     const int bN = 15;
     const std::vector<int> ts = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
     
+    // initialize descriptors
+    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        v->descriptor = Eigen::VectorXd::Zero(N);
+    }
+    
     // extrapolate eigenvalues
     double xhat, yhat, m;
     extrapolateEvals(xhat, yhat, m, evals);
@@ -277,6 +282,13 @@ void Descriptor::computeFastHks()
         }
         
         // 4. project sparse heat kernel on finest resolution level
+        Eigen::SparseMatrix<double> P = mrm.prolongationMatrix(l);
+        Kt = P*Kt*P.transpose();
+        
+        // set descriptor value for current time step
+        for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+            v->descriptor(i) = Kt.coeffRef(v->index, v->index);
+        }
     }
 }
 

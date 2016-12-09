@@ -132,6 +132,64 @@ void MultiresMesh::project(Mesh *mesh1, Mesh *mesh2)
     }
 }
 
+Eigen::Vector3d computeBarycentricCoords(const Eigen::Vector3d& p, FaceCIter f)
+{
+    const Eigen::Vector3d& a(f->he->vertex->position);
+    const Eigen::Vector3d& b(f->he->next->vertex->position);
+    const Eigen::Vector3d& c(f->he->next->next->vertex->position);
+    
+    Eigen::Vector3d v0 = b - a;
+    Eigen::Vector3d v1 = c - a;
+    Eigen::Vector3d v2 = p - a;
+    double d00 = v0.dot(v0);
+    double d01 = v0.dot(v1);
+    double d11 = v1.dot(v1);
+    double d20 = v2.dot(v0);
+    double d21 = v2.dot(v1);
+    double den = d00*d11 - d01*d01;
+    
+    double v = (d11 * d20 - d01 * d21) / den;
+    double w = (d00 * d21 - d01 * d20) / den;
+    double u = 1.0 - v - w;
+    
+    return Eigen::Vector3d(u, v, w);
+}
+
+void MultiresMesh::prolongate()
+{
+    int l = numLods();
+    int v = (int)lod(0)->vertices.size();
+    prolongationMatrices.resize(l);
+    prolongationMatrices[0].resize(v, v);
+    prolongationMatrices[0].setIdentity();
+    
+    for (int i = 1; i < l; i++) {
+        // compute prolongation matrix between lod level l-1 and l
+        Mesh *mesh1 = lod(i-1), *mesh2 = lod(i);
+        int v1 = (int)mesh1->vertices.size(), v2 = (int)mesh2->vertices.size();
+        Eigen::SparseMatrix<double> P(v1, v2);
+        std::vector<Eigen::Triplet<double>> PTriplets;
+        
+        for (VertexCIter v = mesh1->vertices.begin(); v != mesh1->vertices.end(); v++) {
+            FaceCIter f = mesh2->faces.begin() + v->projection.fIdx;
+            Eigen::Vector3d w = computeBarycentricCoords(v->projection.p, f);
+            
+            int j = 0;
+            HalfEdgeCIter h = f->he;
+            do {
+                PTriplets.push_back(Eigen::Triplet<double>(v->index, h->vertex->index, w(j)));
+                
+                j++;
+                h = h->next;
+            } while (h != f->he);
+        }
+        P.setFromTriplets(PTriplets.begin(), PTriplets.end());
+        
+        // compute prolongation matrix between lod level 0 and l
+        prolongationMatrices[i] = prolongationMatrices[i-1]*P;
+    }
+}
+
 void MultiresMesh::build()
 {
     int i = 0;
@@ -149,6 +207,9 @@ void MultiresMesh::build()
 
         i++;
     }
+    
+    // compute prolongation matrices 
+    prolongate();
 }
 
 int MultiresMesh::numLods() const
@@ -164,3 +225,13 @@ Mesh* MultiresMesh::lod(int l) const
     
     return NULL;
 }
+
+Eigen::SparseMatrix<double> MultiresMesh::prolongationMatrix(int l) const
+{
+    if (l >= 0 && l < (int)lods.size()) {
+        return prolongationMatrices[l];
+    }
+    
+    return Eigen::SparseMatrix<double>();
+}
+
