@@ -1,9 +1,11 @@
 # General purpose harness to run and evaluate algorithms for shape descriptors
 
-import os, argparse, subprocess, time
+import os, argparse, subprocess, time, random
 from timeit import default_timer as timer
 
-### Wrappers to evaluate each of the algorithms.
+import numpy as np
+
+### Wrappers to compute the result each of the algorithms.
 # Should return a wall clock time in seconds in addition to writing output files
 
 def eval_strawman(inputFile, outputFile):
@@ -25,6 +27,79 @@ def eval_strawman(inputFile, outputFile):
 
 def eval_HKS():
     pass
+
+
+
+### Evaluate the accuracy of a method
+
+# Parses a feature file in to a numpy array
+def parseFeatureFile(featureFile):
+
+    return np.loadtxt(featureFile, delimiter = ",") 
+
+
+# Takes two same-shaped input arrays, each representing a mesh, where the i'th row is
+# the feature vector for that vertex. It is assumed that the ground truth has the
+# rows in correspondence.
+# Returns a list of accuracy scores [0,1] with one value for each vertex in A. 0 is the best
+# result, if its ground truth had the most similar score, and 1 is the worst if it had
+# the most different score.
+def evaluateAccuracy(featuresA, featuresB, subsampleRate = 1.0):
+
+    result = []
+
+    nRows, nCols = featuresA.shape
+
+    for iRow in range(nRows):
+
+        if random.random() > subsampleRate: continue
+    
+        # Compute distances
+        iFeatures = featuresA[iRow,:]
+        dists = np.linalg.norm(featuresB - iFeatures, axis=1)
+
+        # Find the index at which the matched vertex would lie, after sorting
+        sortedDists = np.argsort(dists)
+        sortedInd = np.where(sortedDists == iRow)[0][0]
+        relativeInd = float(sortedInd) / nRows
+
+        result.append(relativeInd)
+
+    return result
+
+
+# Performs all appropriate pairwise calls to evaluateAccuracy and returns
+# the merged result
+def evaluateAllAccuracies(groupSet, featureDirectory):
+
+    result = []
+
+    for groupName in groupSet:
+   
+        print("Evaluating group: " + groupName)
+
+        group = groupSet[groupName]
+
+        for iGroup in range(len(group)):
+
+            iFilename = os.path.join(featureDirectory, group[iGroup] + ".features")
+            iFeatures = parseFeatureFile(iFilename)
+
+            for jGroup in range(len(group)):
+
+                if iGroup == jGroup: continue
+                print("Evaluating pair: " + group[iGroup] + " and " + group[jGroup])
+            
+                jFilename = os.path.join(featureDirectory, group[jGroup] + ".features")
+                jFeatures = parseFeatureFile(jFilename)
+
+                # Assess the result
+                # NOTE THAT WE ARE SUBSAMPLING BY A LOT RIGHT NOW
+                pairwiseResult = evaluateAccuracy(iFeatures, jFeatures, 0.001)
+                result.append(pairwiseResult)
+
+
+    return result
 
 
 ### Helpers
@@ -71,7 +146,8 @@ def parseGroupFile(filename):
 
     print("Found " + str(len(groupLists)) + " groups")
 
-    return gList
+    return groupLists
+
 
 ### Primary method
 
@@ -197,7 +273,9 @@ def main():
         # Evaluate each method
         for method in methods:
 
-            # TODO generalize this for datasets that have
+            featuresDir = os.path.join(featuresRoot, dataset, method)
+            evaluateAllAccuracies(groupList, featuresDir)
+
 
 
 
