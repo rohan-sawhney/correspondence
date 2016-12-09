@@ -33,6 +33,9 @@ public:
     // returns l'th lod
     Mesh* lod(int l) const;
     
+    // returns prolongation matrix between lod level 0 and l
+    Eigen::SparseMatrix<double> prolongationMatrix(int l) const;
+    
 private:
     // loads mesh into oMesh
     void buildOMesh(Mesh *mesh);
@@ -46,8 +49,12 @@ private:
     // projects mesh1 onto mesh2
     void project(Mesh *mesh1, Mesh *mesh2);
     
+    // computes prolongation matrices
+    void prolongate();
+    
     // Member variables
     std::vector<Mesh *> lods;
+    std::vector<Eigen::SparseMatrix<double>> prolongationMatrices;
     OMesh oMesh;
     double d;
     double C;
