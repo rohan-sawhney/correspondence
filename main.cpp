@@ -1,7 +1,6 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
-#include "MultiresMesh.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -95,12 +94,13 @@ void setupUniformBlocks()
 void printInstructions()
 {
     std::cerr << "1: compute hks\n"
-              << "2: compute wks\n"
-              << "3: toggle descriptor\n"
-              << "4: toggle feature points\n"
-              << "5: generate patches\n"
-              << "6: toggle normals\n"
-              << "7: toggle wireframe\n"
+              << "2: compute fast hks\n"
+              << "3: compute wks\n"
+              << "4: toggle descriptor\n"
+              << "5: toggle feature points\n"
+              << "6: generate patches\n"
+              << "7: toggle normals\n"
+              << "8: toggle wireframe\n"
               << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
@@ -363,12 +363,18 @@ void keyboardPressed(unsigned char key, int x, int y)
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 2]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(FAST_HKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 3]) {
+        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
+        computedDescriptor = true;
+        setFeaturePoints();
+        if (showDescriptor) updateColor();
+        
+    } else if (keys[DIGIT_OFFSET + 4]) {
         showDescriptor = !showDescriptor;
         if (showDescriptor && !computedDescriptor) showDescriptor = false;
         else {
@@ -379,16 +385,16 @@ void keyboardPressed(unsigned char key, int x, int y)
             glutSetWindowTitle(title.c_str());
         }
         
-    } else if (keys[DIGIT_OFFSET + 4]) {
+    } else if (keys[DIGIT_OFFSET + 5]) {
         showFeaturePoints = !showFeaturePoints;
         
-    } else if (keys[DIGIT_OFFSET + 5]) {
+    } else if (keys[DIGIT_OFFSET + 6]) {
         if (computedDescriptor) setPatchColors();
         
-    } else if (keys[DIGIT_OFFSET + 6]) {
+    } else if (keys[DIGIT_OFFSET + 7]) {
         showNormals = !showNormals;
         
-    } else if (keys[DIGIT_OFFSET + 7]) {
+    } else if (keys[DIGIT_OFFSET + 8]) {
         showWireframe = !showWireframe;
         
     } else if (keys['a']) {
@@ -408,10 +414,6 @@ void keyboardPressed(unsigned char key, int x, int y)
         
     } else if (keys['q']) {
         camera.processKeyboard(DOWN, dt);
-    
-    } else if (keys[' ']) {
-        MultiresMesh mrm(&meshes[0], 2, 1000);
-        mrm.build();
     }
 }
 

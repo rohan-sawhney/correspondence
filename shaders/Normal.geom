@@ -4,7 +4,7 @@ layout (line_strip, max_vertices = 6) out;
 
 in vec3 normal[];
 
-const float MAGNITUDE = 0.1;
+const float MAGNITUDE = 0.02;
 
 void generateLine(int index)
 {

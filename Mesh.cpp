@@ -19,7 +19,7 @@ bool Mesh::read(const std::string& fileName)
     if ((readSuccessful = MeshIO::read(in, *this))) {
         name = fileName;
         normalize();
-        descriptor.setup(this, 100);
+        descriptor.setup(this);
     }
     
     in.close();
@@ -43,7 +43,7 @@ bool Mesh::write(const std::string& fileName) const
 
 void Mesh::computeDescriptor(int descriptorName)
 {
-    descriptor.compute(10, descriptorName);
+    descriptor.compute(descriptorName);
 }
 
 void Mesh::normalize()
