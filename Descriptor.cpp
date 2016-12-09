@@ -165,36 +165,14 @@ void extrapolateEvals(double& xhat, double& yhat, double& m, const Eigen::Vector
     m /= den;
 }
 
-double computeMaxEigenvalue(const Eigen::SparseMatrix<double>& L)
-{
-    Spectra::SparseSymMatProd<double> opL(L);
-    
-    Spectra::SymEigsSolver<double,
-    Spectra::LARGEST_MAGN,
-    Spectra::SparseSymMatProd<double>> eigs(&opL, 1, 3);
-    
-    eigs.init();
-    eigs.compute();
-    
-    if (eigs.info() == Spectra::SUCCESSFUL) return eigs.eigenvalues()[0];
-    else std::cout << "Eigen computation failed" << std::endl;
-    
-    return 0.0;
-}
-
 void computeLaplacians(std::vector<Eigen::SparseMatrix<double>>& Ls,
                        std::vector<Eigen::SparseMatrix<double>>& As,
                        std::vector<Eigen::SparseMatrix<double>>& Ainvs,
-                       std::vector<double>& maxEvals,
-                       std::vector<double>& conditionNumbersA,
                        const MultiresMesh& mrm)
 {
-    int lods = mrm.numLods();
-    
-    for (int l = 0; l < lods; l++) {
+    for (int l = 0; l < mrm.numLods(); l++) {
         Mesh *lod = mrm.lod(l);
         int v = (int)lod->vertices.size();
-        double mina = INFINITY, maxa = -INFINITY;
         
         // resize
         Ls[l].resize(v, v); As[l].resize(v, v); Ainvs[l].resize(v, v);
@@ -203,43 +181,21 @@ void computeLaplacians(std::vector<Eigen::SparseMatrix<double>>& Ls,
         buildAdjacency(lod, Ls[l]);
         buildAreaMatrix(lod, As[l]);
         for (VertexIter v = lod->vertices.begin(); v != lod->vertices.end(); v++) {
-            double a = As[l].coeffRef(v->index, v->index);
-            Ainvs[l].insert(v->index, v->index) = 1.0/a;
-            maxa = std::max(maxa, a);
-            mina = std::min(mina, a);
+            Ainvs[l].insert(v->index, v->index) = 1.0/As[l].coeffRef(v->index, v->index);
         }
         Ainvs[l].makeCompressed();
         Ls[l] = Ainvs[l]*Ls[l];
-        
-        // compute max evals and condition numbers
-        maxEvals[l] = computeMaxEigenvalue(Ls[l]);
-        conditionNumbersA[l] = sqrt(maxa / mina);
     }
 }
 
-double computeBinomialElementNorm(const double lambda, const double a, const double t, const int m)
-{
-    double binomial = 0.0;
-    double f = 1.0;
-    for (int k = 0; k <= m-1; k++) {
-        binomial *= (lambda - k);
-        f *= (k+1);
-    }
-    binomial /= f;
-    
-    return fabs(binomial*(exp(-t) - 1))*a;
-}
-
-void computeBinomialRepresentation(Eigen::SparseMatrix<double>& Kt,
-                                   const Eigen::SparseMatrix<double>& L,
-                                   const double t, const int iters)
+void computeBinomialEntries(std::vector<Eigen::SparseMatrix<double>>& binomialSeries,
+                            const Eigen::SparseMatrix<double>& L)
 {
     int k = 0;
     double mf = 1;
-    Kt.setZero();
     Eigen::SparseMatrix<double> Id(L.cols(), L.cols()); Id.setIdentity();
     Eigen::SparseMatrix<double> Q = Id;
-    for (int m = 0; m <= iters; m++) {
+    for (int m = 0; m < (int)binomialSeries.size(); m++) {
         if (k <= m-1) {
             Q = Q*(L - k*Id);
             k++;
@@ -247,7 +203,16 @@ void computeBinomialRepresentation(Eigen::SparseMatrix<double>& Kt,
         
         if (m > 0) mf *= m;
         Q /= mf;
-        Kt += Q*pow(exp(-t) - 1, m);
+        binomialSeries[m] = Q;
+    }
+}
+
+void computeExponentialRepresentation(Eigen::SparseMatrix<double>& Kt, const double t, const int iters,
+                                      const std::vector<Eigen::SparseMatrix<double>>& binomialSeries)
+{
+    Kt.setZero();
+    for (int m = 0; m < iters; m++) {
+        Kt += binomialSeries[m]*pow(exp(-t) - 1, m);
     }
 }
 
@@ -268,7 +233,7 @@ void Descriptor::computeFastHks()
     const double c = 0.2;
     const double reps = 1e-4;
     const double seps = 1e-6;
-    const int iters = 15;
+    const int bN = 15;
     const std::vector<int> ts = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
     
     // extrapolate eigenvalues
@@ -279,11 +244,10 @@ void Descriptor::computeFastHks()
     MultiresMesh mrm(mesh, d, C);
     mrm.build();
     
-    // build laplacian and area matrices and compute max evals for laplacians and condition numbers for A
+    // build laplacian and area matrices
     int lods = mrm.numLods();
     std::vector<Eigen::SparseMatrix<double>> Ls(lods), As(lods), Ainvs(lods);
-    std::vector<double> maxEvals(lods), conditionNumbersA(lods);
-    computeLaplacians(Ls, As, Ainvs, maxEvals, conditionNumbersA, mrm);
+    computeLaplacians(Ls, As, Ainvs, mrm);
     
     for (int i = 0; i < N; i++) {
         // 2. choose coarsest resolution level l s.t. cn > r(t)
@@ -294,14 +258,16 @@ void Descriptor::computeFastHks()
         // 3. compute sparse heat kernel on l
         int v = (int)mrm.lod(l)->vertices.size();
         Eigen::SparseMatrix<double> Kt(v, v);
-        double t = 0.0, t1 = 0.05; // NOTE: I'm not sure if t1 is being set correctly 
+        std::vector<Eigen::SparseMatrix<double>> binomialSeries(bN+1);
+        double t1 = 0.01, t = 0.0;
         int s = 0;
         
         // compute Kt for small t
-        while (computeBinomialElementNorm(maxEvals[l], conditionNumbersA[l], t1, iters) > seps) t1 += 0.05;
+        computeBinomialEntries(binomialSeries, Ls[l]);
+        while ((binomialSeries[bN]*pow(exp(-t1) - 1, bN)).norm() < seps) t1 += 0.01;
         while ((t = ts[i]/pow(2, s)) > t1) s++;
-        computeBinomialRepresentation(Kt, Ls[l], t, iters);
-
+        computeExponentialRepresentation(Kt, t, bN+1, binomialSeries);
+        
         // compute Kt for ts[i]
         for (int j = 0; j < s; j++) {
             sparsify(Kt, seps);
