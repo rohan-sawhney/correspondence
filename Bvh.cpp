@@ -122,7 +122,8 @@ void Bvh::build()
     }
 }
 
-int Bvh::getIntersection(double& hit, Eigen::Vector3d& p, const Eigen::Vector3d& o) const
+int Bvh::getIntersection(double& hit, Eigen::Vector3d& p,
+                         const Eigen::Vector3d& o, const Eigen::Vector3d& d) const
 {
     int idx = 0;
     int index = -1;
@@ -137,23 +138,24 @@ int Bvh::getIntersection(double& hit, Eigen::Vector3d& p, const Eigen::Vector3d&
         idx = t.id;
         stack.pop();
         
+        // continue if this node is further away than the closest found intersection 
+        if (t.d > hit) continue;
+        
         const Node &node(flatTree[idx]);
         if (node.rightOffset == 0) { // node is a leaf
             for (int i = 0; i < node.range; i++) {
                 const Face& f(faces[node.startId+i]);
-                
-                Eigen::Vector3d q;
-                double dist = f.nearestPoint(q, o);
+                double dist = f.intersect(o, d);
                 if (dist < hit) {
-                    index = node.startId + i;
-                    p = q;
+                    index = f.index;
+                    p = o + dist*d;
                     hit = dist;
-                } 
+                }
             }
             
         } else { // not a leaf
-            bool hit0 = flatTree[idx+1].boundingBox.intersect(o, dist1);
-            bool hit1 = flatTree[idx+node.rightOffset].boundingBox.intersect(o, dist2);
+            bool hit0 = flatTree[idx+1].boundingBox.intersect(o, d, dist1);
+            bool hit1 = flatTree[idx+node.rightOffset].boundingBox.intersect(o, d, dist2);
             
             // hit both bounding boxes
             if (hit0 && hit1) {

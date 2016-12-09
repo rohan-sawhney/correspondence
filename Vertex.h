@@ -3,12 +3,6 @@
 
 #include "Types.h"
 
-struct Projection {    
-    Eigen::Vector3d p;
-    double d;
-    int fIdx;
-};
-
 class Vertex {
 public:
     // outgoing halfedge
@@ -22,9 +16,6 @@ public:
     
     // feature
     Eigen::VectorXd descriptor;
-    
-    // projection
-    Projection projection;
     
     // id between 0 and |V|-1
     int index;

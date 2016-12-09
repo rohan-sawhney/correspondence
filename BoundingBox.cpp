@@ -68,17 +68,61 @@ int BoundingBox::maxDimension() const
     return result;
 }
 
-bool BoundingBox::intersect(const Eigen::Vector3d& p, double& dist) const
+bool BoundingBox::intersect(const Eigen::Vector3d& o, const Eigen::Vector3d& d,
+                            double& dist) const
 {
-    // hack
-    if (min.x()-0.1 <= p.x() && p.x() <= max.x()+0.1 &&
-        min.y()-0.1 <= p.y() && p.y() <= max.y()+0.1 &&
-        min.z()-0.1 <= p.z() && p.z() <= max.z()+0.1) {
+    const double& ox(o.x());
+    const double& dx(d.x());
+    double tMin, tMax;
+    if (dx >= 0) {
+        tMin = (min.x() - ox) / dx;
+        tMax = (max.x() - ox) / dx;
         
-        dist = 0.0;
-        return true;
+    } else {
+        tMin = (max.x() - ox) / dx;
+        tMax = (min.x() - ox) / dx;
     }
     
-    dist = INFINITY;
-    return false;
+    const double& oy(o.y());
+    const double& dy(d.y());
+    double tyMin, tyMax;
+    if (dy >= 0) {
+        tyMin = (min.y() - oy) / dy;
+        tyMax = (max.y() - oy) / dy;
+        
+    } else {
+        tyMin = (max.y() - oy) / dy;
+        tyMax = (min.y() - oy) / dy;
+    }
+    
+    if (tMin > tyMax || tyMin > tMax) {
+        dist = INFINITY;
+        return false;
+    }
+    
+    if (tyMin > tMin) tMin = tyMin;
+    if (tyMax < tMax) tMax = tyMax;
+    
+    const double& oz(o.z());
+    const double& dz(d.z());
+    double tzMin, tzMax;
+    if (dz >= 0) {
+        tzMin = (min.z() - oz) / dz;
+        tzMax = (max.z() - oz) / dz;
+        
+    } else {
+        tzMin = (max.z() - oz) / dz;
+        tzMax = (min.z() - oz) / dz;
+    }
+    
+    if (tMin > tzMax || tzMin > tMax) {
+        dist = INFINITY;
+        return false;
+    }
+    
+    if (tzMin > tMin) tMin = tzMin;
+    if (tzMax < tMax) tMax = tzMax;
+    
+    dist = tMin;
+    return true;
 }

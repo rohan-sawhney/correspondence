@@ -3,8 +3,7 @@
 
 #include "Types.h"
 #define HKS 0
-#define FAST_HKS 1
-#define WKS 2
+#define WKS 1
 
 class Descriptor {
 public:
@@ -12,30 +11,34 @@ public:
     Descriptor();
     
     // setup
-    void setup(Mesh *mesh0);
+    void setup(Mesh *mesh0, int k0);
     
     // compute
-    void compute(int descriptorName);
+    void compute(int n, int descriptorName);
     
 private:
+    // build laplace operator
+    void buildLaplace(Eigen::SparseMatrix<double>& L);
+    
+    // build area matrix
+    void buildAreaMatrix(Eigen::SparseMatrix<double>& A);
+    
     // compute eigenvalues and eigenvectors
-    void computeEig(const Eigen::SparseMatrix<double>& W,
+    void computeEig(const Eigen::SparseMatrix<double>& L,
                     const Eigen::SparseMatrix<double>& A);
     
     // compute hks
-    void computeHks();
-    
-    // compute fast hks
-    void computeFastHks();
+    void computeHks(int n);
     
     // compute wks
-    void computeWks();
+    void computeWks(int n);
     
     // normalize
     void normalize();
     
     // member variable
     Mesh *mesh;
+    int k;
     Eigen::VectorXd evals;
     Eigen::MatrixXd evecs;
 };

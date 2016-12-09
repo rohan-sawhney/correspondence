@@ -30,8 +30,8 @@ public:
     // returns bounding box
     BoundingBox boundingBox() const;
     
-    // get nearest point on triangle
-    double nearestPoint(Eigen::Vector3d& q, const Eigen::Vector3d& p) const;
+    // perform ray triangle intersection
+    double intersect(const Eigen::Vector3d& o, const Eigen::Vector3d& d) const;
 };
 
 #endif

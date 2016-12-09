@@ -21,8 +21,8 @@ public:
     // return the max dimension
     int maxDimension() const;
     
-    // check if bounding box and face intersect
-    bool intersect(const Eigen::Vector3d& p, double& dist) const;
+    // check if bounding box and ray intersect
+    bool intersect(const Eigen::Vector3d& o, const Eigen::Vector3d& d, double& dist) const;
     
     // member variables
     Eigen::Vector3d min;

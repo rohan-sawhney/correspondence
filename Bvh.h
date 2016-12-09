@@ -20,7 +20,8 @@ public:
     void build();
     
     // returns face index
-    int getIntersection(double& hit, Eigen::Vector3d& p, const Eigen::Vector3d& o) const;
+    int getIntersection(double& hit, Eigen::Vector3d& p,
+                        const Eigen::Vector3d& o, const Eigen::Vector3d& d) const;
     
 private:
     // member variables

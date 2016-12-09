@@ -2,8 +2,6 @@
 #include "Mesh.h"
 #include "MeshIO.h"
 #include "Bvh.h"
-#include <future>
-#include <functional>
 #define _USE_MATH_DEFINES
 #include <openmesh/Tools/Decimater/DecimaterT.hh>
 #include <openmesh/Tools/Decimater/ModQuadricT.hh>
@@ -119,17 +117,17 @@ void MultiresMesh::project(Mesh *mesh1, Mesh *mesh2)
     bvh.build();
     
     // project vertices
-    std::vector<std::future<int>> futures; futures.reserve(mesh1->vertices.size());
-    for (VertexIter v = mesh1->vertices.begin(); v != mesh1->vertices.end(); v++) {
-        v->projection.d = INFINITY;
-        futures.push_back(std::async(std::launch::async, &Bvh::getIntersection,
-                                     &bvh, std::ref(v->projection.d),
-                                     std::ref(v->projection.p), std::cref(v->position)));
+    int misses = 0;
+    for (VertexCIter v = mesh1->vertices.begin(); v != mesh1->vertices.end(); v++) {
+        Eigen::Vector3d p1, p2;
+        double hit1 = INFINITY, hit2 = INFINITY;
+        Eigen::Vector3d n = v->normal();
+        int fIdx1 = bvh.getIntersection(hit1, p1, v->position, n);
+        int fIdx2 = bvh.getIntersection(hit2, p2, v->position, -n);
+        if (hit1 == INFINITY && hit2 == INFINITY) misses++;
+        // TODO: store face index and intersection point per vertex
     }
-    
-    for (VertexIter v = mesh1->vertices.begin(); v != mesh1->vertices.end(); v++) {
-        v->projection.fIdx = futures[v->index].get();
-    }
+    std::cout << "misses: " << misses << std::endl;
 }
 
 void MultiresMesh::build()
@@ -146,21 +144,11 @@ void MultiresMesh::build()
         
         // project
         project(lods[i], lods[i+1]);
+        
+        std::string name = "/Users/rohansawhney/Desktop/dragon" + std::to_string(i+1);
+        //write(name + ".obj", mesh);
+        lods[i+1]->write(name + ".obj");
 
         i++;
     }
-}
-
-int MultiresMesh::numLods() const
-{
-    return (int)lods.size();
-}
-
-Mesh* MultiresMesh::lod(int l) const
-{
-    if (l >= 0 && l < (int)lods.size()) {
-        return lods[l];
-    }
-    
-    return NULL;
 }
