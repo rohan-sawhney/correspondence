@@ -1,0 +1,35 @@
+toolsets = gnu;
+
+program correspond {
+
+    sources { 
+		../BoundingBox.cpp
+		../Bvh.cpp
+		../Camera.cpp
+		../Descriptor.cpp
+		../Edge.cpp
+		../Face.cpp
+		../HalfEdge.cpp
+		../main.cpp
+		../Mesh.cpp
+		../MeshIO.cpp
+		../MultiresMesh.cpp
+		../PatchMatch.cpp
+		../RenderData.cpp
+		../Shader.cpp
+		../Vertex.cpp
+        ../deps/glad/src/glad.c
+	}
+
+	includedirs = ../;
+	includedirs += ../deps/;
+    includedirs += ../deps/glad/include/;
+
+	cxx-compiler-options = "-std=c++11 -O3";
+
+    libs = glut dl;
+
+    // OpenMesh things
+    libdirs = ../deps/OpenMesh/lib/linux/;
+    libs += OpenMeshCore OpenMeshTools;
+}
