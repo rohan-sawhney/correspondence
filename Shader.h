@@ -2,12 +2,13 @@
 #define SHADER_H
 
 #ifdef __APPLE_CC__
-#include <OpenGL/gl3.h>
-#include <OpenGL/gl3ext.h>
-#define __gl_h_
-#include <GLUT/glut.h>
+    #include <OpenGL/gl3.h>
+    #include <OpenGL/gl3ext.h>
+    #define __gl_h_
+    #include <GLUT/glut.h>
 #else
-#include <GL/glut.h>
+    #include <glad/glad.h>
+    #include <GL/glut.h>
 #endif
 
 #include <stdlib.h>

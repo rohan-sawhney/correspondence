@@ -5,8 +5,8 @@
 #include <future>
 #include <functional>
 #define _USE_MATH_DEFINES
-#include <openmesh/Tools/Decimater/DecimaterT.hh>
-#include <openmesh/Tools/Decimater/ModQuadricT.hh>
+#include <OpenMesh/Tools/Decimater/DecimaterT.hh>
+#include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
 #include <OpenMesh/Tools/Decimater/ModNormalFlippingT.hh>
 #undef _USE_MATH_DEFINES
 

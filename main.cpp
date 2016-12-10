@@ -2,6 +2,7 @@
 #include "RenderData.h"
 #include "Camera.h"
 
+
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
 
@@ -215,6 +216,17 @@ void setPatchColors()
 
 void init()
 {
+
+    // Initialize openGL if applicable
+#ifndef __APPLE__
+    if(!gladLoadGL()) {
+        std::cerr << "ERROR: Failed to load openGL using GLAD" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::cout << "Loaded openGL version: " <<  glGetString(GL_VERSION) << std::endl;
+#endif 
+
+
     // enable depth testing and multisampling
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glEnable(GL_DEPTH_TEST);
@@ -469,8 +481,17 @@ int main(int argc, char** argv)
         if (shaderPathSpecified) {
             std::string title = "Mesh Correspondence";
             glutInit(&argc, argv);
+
+
+#ifdef __APPLE_CC__
             glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH |
                                 GLUT_3_2_CORE_PROFILE | GLUT_MULTISAMPLE);
+
+#else
+            glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH |
+                                GLUT_MULTISAMPLE);
+#endif
+
             glutInitWindowSize(gridX, gridY);
             glutCreateWindow(title.c_str());
             

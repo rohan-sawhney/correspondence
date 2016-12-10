@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <iostream>
 #include "math.h"
-#include <eigen/Core>
-#include <eigen/Dense>
-#include <eigen/SparseCore>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/SparseCore>
 
 class Vertex;
 class Edge;

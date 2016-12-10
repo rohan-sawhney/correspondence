@@ -3,7 +3,7 @@
 
 #include "Types.h"
 #define _USE_MATH_DEFINES
-#include <openmesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #undef _USE_MATH_DEFINES
 
 struct Traits : public OpenMesh::DefaultTraits {
