@@ -11,7 +11,7 @@ int gridY = 600;
 GLuint transformUbo;
 GLuint lightUbo;
 
-std::vector<std::string> paths;
+std::string path;
 std::string shaderPath;
 Shader meshShader;
 Shader normalShader;
@@ -26,14 +26,14 @@ float lastX = 0.0, lastY = 0.0;
 bool keys[256];
 bool firstMouse = true;
 
-std::vector<Mesh> meshes = {Mesh(), Mesh()};
-std::vector<GLMesh> glMeshes = {GLMesh(&meshes[0]), GLMesh(&meshes[1])};
+Mesh mesh;
+GLMesh glMesh(&mesh);
 
-std::vector<std::unordered_map<int, bool>> featureMaps(2);
-std::vector<std::vector<GLPoint>> glPoints(2);
+std::unordered_map<int, bool> featureMap;
+std::vector<GLPoint> glPoints;
 
 const Eigen::Vector3f defaultColor(1.0, 0.5, 0.2);
-std::vector<std::vector<Eigen::Vector3f>> colors(meshes.size());
+std::vector<Eigen::Vector3f> colors;
 
 const Eigen::Vector3f lightPosition(0.0, 3.0, -3.0);
 const Eigen::Vector3f lightColor(1.0, 1.0, 1.0);
@@ -68,10 +68,12 @@ void setupUniformBlocks()
     glUniformBlockBinding(pointShader.program, pointShaderIndex, 0);
     
     // add transform data
+    Eigen::Matrix4f Id = Eigen::Matrix4f::Identity();
     glGenBuffers(1, &transformUbo);
     glBindBuffer(GL_UNIFORM_BUFFER, transformUbo);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, transformUbo);
     glBufferData(GL_UNIFORM_BUFFER, 3*sizeof(Eigen::Matrix4f), NULL, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_UNIFORM_BUFFER, 2*sizeof(Eigen::Matrix4f), sizeof(Eigen::Matrix4f), Id.data());
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     
     // 2) generate light index
@@ -111,30 +113,26 @@ void printInstructions()
 
 void setFeaturePoints()
 {
-    for (int i = 0; i < 2; i++) {
-        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-            if (v->isFeature(t)) featureMaps[i][v->index] = true;
-            else featureMaps[i][v->index] = false;
-        }
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        if (v->isFeature(t)) featureMap[v->index] = true;
+        else featureMap[v->index] = false;
     }
 }
 
-void setColor(int i, bool useDescriptor = false)
+void setColor(bool useDescriptor = false)
 {
-    colors[i] = std::vector<Eigen::Vector3f>(meshes[i].vertices.size());
-    for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-        if (useDescriptor) colors[i][v->index] = Eigen::Vector3f(v->descriptor(t), 0.0, 0.0);
-        else colors[i][v->index] = defaultColor;
+    colors.resize(mesh.vertices.size());
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        if (useDescriptor) colors[v->index] = Eigen::Vector3f(v->descriptor(t), 0.0, 0.0);
+        else colors[v->index] = defaultColor;
     }
 }
 
 void updateColor()
 {
-    for (int i = 0; i < (int)meshes.size(); i++) {
-        if (showDescriptor) setColor(i, true);
-        else setColor(i);
-        glMeshes[i].update(colors[i]);
-    }
+    if (showDescriptor) setColor(true);
+    else setColor();
+    glMesh.update(colors);
 }
 
 void generatePatchColors(std::vector<Eigen::Vector3f>& patchColors)
@@ -158,63 +156,61 @@ bool terminate(const std::vector<std::queue<VertexCIter>>& queues)
 
 void setPatchColors()
 {
-    for (int m = 0; m < 2; m++) {
-        int p = 0;
-        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
-            if (featureMaps[m][v->index]) p++;
-        }
-        
-        std::unordered_map<int, bool> visited;
-        std::vector<std::queue<VertexCIter>> queues(p);
-        std::vector<int> levels(p, 0);
-        std::vector<Eigen::Vector3f> patchColors(p);
-        generatePatchColors(patchColors);
-        VertexCIter end = meshes[m].vertices.end();
-        
-        // initialize 
-        int i = 0;
-        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
-            if (featureMaps[m][v->index]) {
-                visited[v->index] = true;
-                colors[m][v->index] = patchColors[i];
-                queues[i].push(v);
-                queues[i].push(end);
-                i++;
-            }
-        }
-        
-        // perform bfs
-        i = 0;
-        while (!terminate(queues)) {
-            while (queues[i].empty()) i = (i+1) % p;
-            VertexCIter v = queues[i].front();
-            queues[i].pop();
-            
-            if (v == end) {
-                levels[i]++;
-                queues[i].push(end);
-                if (queues[i].front() == end) queues[i].pop();
-                i = (i+1) % p;
-                
-            } else {
-                HalfEdgeCIter h = v->he;
-                do {
-                    VertexCIter vn = h->flip->vertex;
-                    if (!visited[vn->index]) {
-                        colors[m][vn->index] = patchColors[i];
-                        
-                        queues[i].push(vn);
-                        visited[vn->index] = true;
-                    }
-                    
-                    h = h->flip->next;
-                } while (h != v->he);
-            }
-        }
-        
-        // update
-        glMeshes[m].update(colors[m]);
+    int p = 0;
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        if (featureMap[v->index]) p++;
     }
+    
+    std::unordered_map<int, bool> visited;
+    std::vector<std::queue<VertexCIter>> queues(p);
+    std::vector<int> levels(p, 0);
+    std::vector<Eigen::Vector3f> patchColors(p);
+    generatePatchColors(patchColors);
+    VertexCIter end = mesh.vertices.end();
+    
+    // initialize 
+    int i = 0;
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        if (featureMap[v->index]) {
+            visited[v->index] = true;
+            colors[v->index] = patchColors[i];
+            queues[i].push(v);
+            queues[i].push(end);
+            i++;
+        }
+    }
+    
+    // perform bfs
+    i = 0;
+    while (!terminate(queues)) {
+        while (queues[i].empty()) i = (i+1) % p;
+        VertexCIter v = queues[i].front();
+        queues[i].pop();
+        
+        if (v == end) {
+            levels[i]++;
+            queues[i].push(end);
+            if (queues[i].front() == end) queues[i].pop();
+            i = (i+1) % p;
+            
+        } else {
+            HalfEdgeCIter h = v->he;
+            do {
+                VertexCIter vn = h->flip->vertex;
+                if (!visited[vn->index]) {
+                    colors[vn->index] = patchColors[i];
+                    
+                    queues[i].push(vn);
+                    visited[vn->index] = true;
+                }
+                
+                h = h->flip->next;
+            } while (h != v->he);
+        }
+    }
+    
+    // update
+    glMesh.update(colors);
 }
 
 void init()
@@ -229,17 +225,14 @@ void init()
     setupUniformBlocks();
     
     // read meshes
-    success = true;
-    for (int i = 0; i < (int)meshes.size(); i++) {
-        if (!meshes[i].read(paths[i])) success = false;
-        if (success) {
-            setColor(i);
-            glMeshes[i].setup(colors[i]);
-            
-            for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-                glPoints[i].push_back(GLPoint(v->position.cast<float>()));
-                glPoints[i][v->index].setup();
-            }
+    if (mesh.read(path)) {
+        setColor();
+        glMesh.setup(colors);
+        
+        glPoints.reserve(mesh.vertices.size());
+        for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+            glPoints.push_back(GLPoint(v->position.cast<float>()));
+            glPoints[v->index].setup();
         }
     }
     
@@ -263,35 +256,24 @@ void uploadCameraTransforms()
                 camera.pos.x(), camera.pos.y(), camera.pos.z());
 }
 
-void uploadMeshTransform(const Eigen::Matrix4f& transform)
-{
-    // set transform
-    glBindBuffer(GL_UNIFORM_BUFFER, transformUbo);
-    glBufferSubData(GL_UNIFORM_BUFFER, 2*sizeof(Eigen::Matrix4f), sizeof(Eigen::Matrix4f),
-                    transform.data());
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
-void draw(int m)
+void draw()
 {
     // draw mesh
-    glMeshes[m].draw(meshShader);
-    if (showNormals) glMeshes[m].draw(normalShader);
+    glMesh.draw(meshShader);
+    if (showNormals) glMesh.draw(normalShader);
     if (showWireframe) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glDepthMask(GL_FALSE);
-        glMeshes[m].draw(wireframeShader);
+        glMesh.draw(wireframeShader);
         glDepthMask(GL_TRUE);
         glDisable(GL_BLEND);
     }
     
     // draw points
     if (computedDescriptor && showFeaturePoints) {
-        for (VertexCIter v = meshes[m].vertices.begin(); v != meshes[m].vertices.end(); v++) {
-            if (featureMaps[m][v->index]) {
-                glPoints[m][v->index].draw(pointShader);
-            }
+        for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+            if (featureMap[v->index]) glPoints[v->index].draw(pointShader);
         }
     }
 }
@@ -313,13 +295,7 @@ void display()
         glDepthFunc(GL_LEQUAL);
         
         // draw
-        Eigen::Matrix4f transform = Eigen::Matrix4f::Identity(); transform(0, 3) = -1.0;
-        uploadMeshTransform(transform);
-        draw(0);
-        
-        transform(0, 3) = 1.0;
-        uploadMeshTransform(transform);
-        draw(1);
+        draw();
         
         // swap
         glutSwapBuffers();
@@ -333,11 +309,9 @@ void idle()
 
 void reset()
 {
-    for (int i = 0; i < (int)glMeshes.size(); i++) {
-        glMeshes[i].reset();
-        for (VertexCIter v = meshes[i].vertices.begin(); v != meshes[i].vertices.end(); v++) {
-            glPoints[i][v->index].reset();
-        }
+    glMesh.reset();
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        glPoints[v->index].reset();
     }
     
     meshShader.reset();
@@ -357,19 +331,19 @@ void keyboardPressed(unsigned char key, int x, int y)
         exit(0);
         
     } else if (keys[DIGIT_OFFSET + 1]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(HKS);
+        mesh.computeDescriptor(HKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 2]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(FAST_HKS);
+        mesh.computeDescriptor(FAST_HKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 3]) {
-        for (int i = 0; i < (int)meshes.size(); i++) meshes[i].computeDescriptor(WKS);
+        mesh.computeDescriptor(WKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
@@ -427,11 +401,11 @@ void special(int i, int x, int y)
     switch (i) {
         case GLUT_KEY_LEFT:
             t--;
-            if (t < 0) t = (int)meshes[0].vertices[0].descriptor.size() - 1;
+            if (t < 0) t = (int)mesh.vertices[0].descriptor.size() - 1;
             break;
         case GLUT_KEY_RIGHT:
             t++;
-            int n = std::max(0, (int)meshes[0].vertices[0].descriptor.size() - 1);
+            int n = std::max(0, (int)mesh.vertices[0].descriptor.size() - 1);
             if (t > n) t = 0;
             break;
     }
@@ -459,31 +433,77 @@ void mouse(int x, int y)
     camera.processMouse(dx, dy);
 }
 
+void printUsage(char *programName)
+{
+    std::cout << "Usage: "
+              << programName
+              << "-descriptor 0/1/2 -obj_path PATH -shader_path PATH"
+              << std::endl;
+}
+
+
 int main(int argc, char** argv)
 {
-    if (argc != 4) {
-        std::cout << "Usage: " << argv[0] << " OBJ_PATH_1 OBJ_PATH_2 SHADER_PATH" << std::endl;
-        return 0;
+    // parse
+    int descriptor = -1;
+    bool objPathSpecified = false;
+    bool shaderPathSpecified = false;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "-descriptor" && i+1 < argc) {
+            descriptor = std::atoi(argv[i+1]);
+            i++;
+            
+        } else if (std::string(argv[i]) == "-obj_path" && i+1 < argc) {
+            path = argv[i+1];
+            objPathSpecified = true;
+            i++;
+            
+        } else if (std::string(argv[i]) == "-shader_path" && i+1 < argc) {
+            shaderPath = argv[i+1];
+            shaderPathSpecified = true;
+            i++;
+        }
     }
     
-    paths.push_back(argv[1]);
-    paths.push_back(argv[2]);
-    shaderPath = argv[3];
+    if (objPathSpecified) {
+        if (shaderPathSpecified) {
+            std::string title = "Mesh Correspondence";
+            glutInit(&argc, argv);
+            glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH |
+                                GLUT_3_2_CORE_PROFILE | GLUT_MULTISAMPLE);
+            glutInitWindowSize(gridX, gridY);
+            glutCreateWindow(title.c_str());
+            
+            init();
+            
+            glutDisplayFunc(display);
+            glutIdleFunc(idle);
+            glutKeyboardFunc(keyboardPressed);
+            glutKeyboardUpFunc(keyboardReleased);
+            glutSpecialFunc(special);
+            glutMotionFunc(mouse);
+            
+            if (descriptor >= 0 && descriptor <= 2) {
+                mesh.computeDescriptor(descriptor);
+                computedDescriptor = showDescriptor = true;
+                setFeaturePoints();
+                updateColor();
+                title += ", t: " + std::to_string(t);
+                glutSetWindowTitle(title.c_str());
+            }
+            
+            glutMainLoop();
+        
+        } else if (descriptor >= 0 && descriptor <= 2) {
+            if (mesh.read(path)) mesh.computeDescriptor(descriptor);
+            
+        } else {
+            printUsage(argv[0]);
+        }
     
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_3_2_CORE_PROFILE | GLUT_MULTISAMPLE);
-    glutInitWindowSize(gridX, gridY);
-    glutCreateWindow("Mesh Correspondence");
-    
-    init();
-    
-    glutDisplayFunc(display);
-    glutIdleFunc(idle);
-    glutKeyboardFunc(keyboardPressed);
-    glutKeyboardUpFunc(keyboardReleased);
-    glutSpecialFunc(special);
-    glutMotionFunc(mouse);
-    glutMainLoop();
+    } else {
+        printUsage(argv[0]);
+    }
     
     return 0;
 }

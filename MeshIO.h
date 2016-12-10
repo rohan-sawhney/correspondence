@@ -48,6 +48,9 @@ public:
     // writes eigenvectors and eigenvalues to file
     static void writeEig(std::ofstream& out, Eigen::VectorXd& evals, Eigen::MatrixXd& evecs);
     
+    // writes descriptor to file
+    static void writeDescriptor(std::ofstream& out, const Mesh& mesh);
+    
     // builds the halfedge mesh
     static bool buildMesh(const MeshData& data, Mesh& mesh);
     

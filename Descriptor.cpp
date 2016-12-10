@@ -346,13 +346,35 @@ void Descriptor::normalize()
     }
 }
 
-void Descriptor::compute(int descriptorName)
+void Descriptor::compute(int descriptor)
 {
     // compute descriptor
-    if (descriptorName == HKS) computeHks();
-    else if (descriptorName == FAST_HKS) computeFastHks();
-    else if (descriptorName == WKS) computeWks();
+    std::string descriptorName;
+    switch (descriptor) {
+        case HKS:
+            computeHks();
+            descriptorName = "hks";
+            break;
+        case FAST_HKS:
+            computeFastHks();
+            descriptorName = "fks";
+            break;
+        case WKS:
+            computeWks();
+            descriptorName = "wks";
+            break;
+    }
     
     // normalize
     normalize();
+    
+    // write to file
+    std::string filename = mesh->name;
+    filename.replace(filename.find_last_of(".")+1, 3, descriptorName);
+    std::ofstream out(filename);
+    
+    if (out.is_open()) {
+        MeshIO::writeDescriptor(out, *mesh);
+        out.close();
+    }
 }

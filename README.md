@@ -1,4 +1,5 @@
 # Correspondence
-Implements hks and wks to compute correspondences
+Computes hks, fast hks and wks
 
-Usage: ./correspondence OBJ_PATH_1 OBJ_PATH_2 SHADER_PATH
+Usage: -descriptor 0/1/2 -obj_path PATH -shader_path PATH
+Interactive mode (OpenGL) will only be used if shader_path is specified.  

@@ -15,7 +15,7 @@ public:
     void setup(Mesh *mesh0);
     
     // compute
-    void compute(int descriptorName);
+    void compute(int descriptor);
     
 private:
     // compute eigenvalues and eigenvectors

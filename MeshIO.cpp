@@ -447,3 +447,13 @@ void MeshIO::writeEig(std::ofstream& out, Eigen::VectorXd& evals, Eigen::MatrixX
         out << std::endl;
     }
 }
+
+void MeshIO::writeDescriptor(std::ofstream& out, const Mesh& mesh)
+{
+    for (VertexCIter v = mesh.vertices.begin(); v != mesh.vertices.end(); v++) {
+        for (int i = 0; i < (int)v->descriptor.size(); i++) {
+            out << std::setprecision(8) << v->descriptor(i) << " ";
+        }
+        out << std::endl;
+    }
+}
