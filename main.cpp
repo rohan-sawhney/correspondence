@@ -1,7 +1,7 @@
 #include "Mesh.h"
 #include "RenderData.h"
 #include "Camera.h"
-
+#include "Descriptor.h"
 
 #define ESCAPE 27
 #define DIGIT_OFFSET 48
@@ -343,19 +343,22 @@ void keyboardPressed(unsigned char key, int x, int y)
         exit(0);
         
     } else if (keys[DIGIT_OFFSET + 1]) {
-        mesh.computeDescriptor(HKS);
+        Descriptor descriptor(&mesh);
+        descriptor.compute(HKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 2]) {
-        mesh.computeDescriptor(FAST_HKS);
+        Descriptor descriptor(&mesh);
+        descriptor.compute(FAST_HKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 3]) {
-        mesh.computeDescriptor(WKS);
+        Descriptor descriptor(&mesh);
+        descriptor.compute(WKS);
         computedDescriptor = true;
         setFeaturePoints();
         if (showDescriptor) updateColor();
@@ -457,12 +460,12 @@ void printUsage(char *programName)
 int main(int argc, char** argv)
 {
     // parse
-    int descriptor = -1;
+    int descriptorName = -1;
     bool objPathSpecified = false;
     bool shaderPathSpecified = false;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "-descriptor" && i+1 < argc) {
-            descriptor = std::atoi(argv[i+1]);
+            descriptorName = std::atoi(argv[i+1]);
             i++;
             
         } else if (std::string(argv[i]) == "-obj_path" && i+1 < argc) {
@@ -481,7 +484,6 @@ int main(int argc, char** argv)
         if (shaderPathSpecified) {
             std::string title = "Mesh Correspondence";
             glutInit(&argc, argv);
-
 
 #ifdef __APPLE_CC__
             glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH |
@@ -504,8 +506,9 @@ int main(int argc, char** argv)
             glutSpecialFunc(special);
             glutMotionFunc(mouse);
             
-            if (descriptor >= 0 && descriptor <= 2) {
-                mesh.computeDescriptor(descriptor);
+            if (descriptorName >= HKS && descriptorName <= WKS) {
+                Descriptor descriptor(&mesh);
+                descriptor.compute(descriptorName);
                 computedDescriptor = showDescriptor = true;
                 setFeaturePoints();
                 updateColor();
@@ -515,8 +518,11 @@ int main(int argc, char** argv)
             
             glutMainLoop();
         
-        } else if (descriptor >= 0 && descriptor <= 2) {
-            if (mesh.read(path)) mesh.computeDescriptor(descriptor);
+        } else if (descriptorName >= HKS && descriptorName <= WKS) {
+            if (mesh.read(path)) {
+                Descriptor descriptor(&mesh);
+                descriptor.compute(descriptorName, false);
+            }
             
         } else {
             printUsage(argv[0]);

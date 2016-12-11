@@ -9,18 +9,14 @@
 class Descriptor {
 public:
     // constructor
-    Descriptor();
-    
-    // setup
-    void setup(Mesh *mesh0);
+    Descriptor(Mesh *mesh0);
     
     // compute
-    void compute(int descriptor);
+    void compute(int descriptor, bool loadEig = true);
     
 private:
     // compute eigenvalues and eigenvectors
-    void computeEig(const Eigen::SparseMatrix<double>& W,
-                    const Eigen::SparseMatrix<double>& A);
+    void computeEig(int K, bool loadEig);
     
     // compute hks
     void computeHks();

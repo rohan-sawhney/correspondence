@@ -5,7 +5,6 @@
 #include "Edge.h"
 #include "Face.h"
 #include "HalfEdge.h"
-#include "Descriptor.h"
 
 class Mesh {
 public:
@@ -18,9 +17,6 @@ public:
     // write mesh to file
     bool write(const std::string& fileName) const;
     
-    // compute descriptor
-    void computeDescriptor(int descriptorName);
-            
     // member variables
     std::vector<HalfEdge> halfEdges;
     std::vector<Vertex> vertices;
@@ -32,9 +28,6 @@ public:
 private:
     // center mesh about origin and rescale to unit radius
     void normalize();
-    
-    // member variable
-    Descriptor descriptor;
 };
 
 #endif

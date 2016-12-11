@@ -5,41 +5,13 @@
 #include <spectra/include/MatOp/SparseSymMatProd.h>
 #include <spectra/include/MatOp/SparseCholesky.h>
 #include <spectra/include/SymGEigsSolver.h>
-#define K 100
 #define N 10
 
-Descriptor::Descriptor()
+Descriptor::Descriptor(Mesh *mesh0):
+mesh(mesh0)
 {
     
 }
-
-void Descriptor::computeEig(const Eigen::SparseMatrix<double>& W,
-                            const Eigen::SparseMatrix<double>& A)
-{
-    Spectra::SparseSymMatProd<double> opW(W);
-    Spectra::SparseCholesky<double> opA(A);
-    
-    Spectra::SymGEigsSolver<double,
-                            Spectra::SMALLEST_MAGN,
-                            Spectra::SparseSymMatProd<double>,
-                            Spectra::SparseCholesky<double>,
-                            Spectra::GEIGS_CHOLESKY> geigs(&opW, &opA, K, 2*K);
-    
-    geigs.init();
-    geigs.compute();
-    
-    if (geigs.info() == Spectra::SUCCESSFUL) {
-        evals = geigs.eigenvalues();
-        evecs = geigs.eigenvectors();
-    
-    } else {
-        std::cout << "Eigen computation failed" << std::endl;
-    }
-    
-    Eigen::MatrixXd err = W*evecs - A*evecs*evals.asDiagonal();
-    std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
-}
-
 void buildAdjacency(Mesh *mesh, Eigen::SparseMatrix<double>& W)
 {
     std::vector<Eigen::Triplet<double>> WTriplets;
@@ -78,17 +50,16 @@ void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A)
     A *= mesh->vertices.size() / sum;
 }
 
-void Descriptor::setup(Mesh *mesh0)
+void Descriptor::computeEig(const int K, const bool loadEig)
 {
-    mesh = mesh0;
-    
+    // read eigvalues and eigenvectors from file
     std::string filename = mesh->name;
     filename.replace(filename.find_last_of(".")+1, 3, "eig");
     std::ifstream in(filename);
     
-    if (in.is_open()) {
-        // read eigvalues and eigenvectors from file
+    if (loadEig && in.is_open()) {
         MeshIO::readEig(in, evals, evecs);
+        in.close();
         
     } else {
         int v = (int)mesh->vertices.size();
@@ -102,19 +73,41 @@ void Descriptor::setup(Mesh *mesh0)
         buildAreaMatrix(mesh, A);
         
         // compute eigenvectors and eigenvalues
-        computeEig(W, A);
+        Spectra::SparseSymMatProd<double> opW(W);
+        Spectra::SparseCholesky<double> opA(A);
+        
+        Spectra::SymGEigsSolver<double,
+        Spectra::SMALLEST_MAGN,
+        Spectra::SparseSymMatProd<double>,
+        Spectra::SparseCholesky<double>,
+        Spectra::GEIGS_CHOLESKY> geigs(&opW, &opA, K, 2*K);
+        
+        geigs.init();
+        geigs.compute();
+        
+        if (geigs.info() == Spectra::SUCCESSFUL) {
+            evals = geigs.eigenvalues();
+            evecs = geigs.eigenvectors();
+            
+        } else {
+            std::cout << "Eigen computation failed" << std::endl;
+        }
+        
+        Eigen::MatrixXd err = W*evecs - A*evecs*evals.asDiagonal();
+        std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
         
         // write eigvalues and eigenvectors to file
         std::ofstream out(filename);
-        if (out.is_open()) MeshIO::writeEig(out, evals, evecs);
-        out.close();
+        if (out.is_open()) {
+            MeshIO::writeEig(out, evals, evecs);
+            out.close();
+        }
     }
-    
-    in.close();
 }
 
 void Descriptor::computeHks()
 {
+    const int K = (int)evals.size();
     const double ln = 4*log(10);
     const double tmin = ln/evals(0);
     const double step = (ln/evals(K-2) - tmin) / N;
@@ -149,6 +142,7 @@ void Descriptor::computeHks()
 void extrapolateEvals(double& xhat, double& yhat, double& m, const Eigen::VectorXd& evals)
 {
     // compute averages
+    const int K = (int)evals.size();
     xhat = 0.0; yhat = 0.0;
     for (int i = 0; i < K; i++) {
         xhat += i;
@@ -294,6 +288,7 @@ void Descriptor::computeFastHks()
 
 void Descriptor::computeWks()
 {
+    const int K = (int)evals.size();
     Eigen::VectorXd logE(K);
     for (int i = 0; i < K; i++) logE(i) = log(evals(i));
     const double emin = logE(K-2);
@@ -346,20 +341,23 @@ void Descriptor::normalize()
     }
 }
 
-void Descriptor::compute(int descriptor)
+void Descriptor::compute(int descriptor, bool loadEig)
 {
     // compute descriptor
     std::string descriptorName;
     switch (descriptor) {
         case HKS:
+            computeEig(300, loadEig);
             computeHks();
             descriptorName = "hks";
             break;
         case FAST_HKS:
+            computeEig(30, loadEig);
             computeFastHks();
             descriptorName = "fks";
             break;
         case WKS:
+            computeEig(300, loadEig);
             computeWks();
             descriptorName = "wks";
             break;
