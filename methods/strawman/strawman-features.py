@@ -71,7 +71,7 @@ def main():
 
         for v in verts:
 
-            outFile.write(str(v[0]) + "," + str(v[1]) + "," + str(v[2]) + "\n")
+            outFile.write(str(v[0]) + " " + str(v[1]) + " " + str(v[2]) + "\n")
 
 
 
