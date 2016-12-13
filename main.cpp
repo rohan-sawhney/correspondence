@@ -452,7 +452,7 @@ void printUsage(char *programName)
 {
     std::cout << "Usage: "
               << programName
-              << "-descriptor 0/1/2 -obj_path PATH -shader_path PATH"
+              << " -descriptor 0/1/2/3 -obj_path PATH -shader_path PATH"
               << std::endl;
 }
 
@@ -518,7 +518,7 @@ int main(int argc, char** argv)
             
             glutMainLoop();
         
-        } else if (descriptorName >= HKS && descriptorName <= WKS) {
+        } else if (descriptorName >= HKS && descriptorName <= CURVE) {
             if (mesh.read(path)) {
                 Descriptor descriptor(&mesh);
                 descriptor.compute(descriptorName, false);

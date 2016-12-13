@@ -25,7 +25,19 @@ public:
     
     // projection
     Projection projection;
+  
+    // gaussian curvature, normalized between -1 and 1
+    double gaussCurvature;
     
+    // mean curvature, normalized between -1 and 1
+    double meanCurvature;
+ 
+    // principal curvatures
+    double k1, k2;
+
+    // 2pi - ∑ø
+    double angleDefect() const;
+ 
     // id between 0 and |V|-1
     int index;
            

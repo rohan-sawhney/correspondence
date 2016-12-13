@@ -323,6 +323,71 @@ void Descriptor::computeWks()
     }
 }
 
+void Descriptor::computeCurve() {
+
+	std::cout << "Computing curvature descriptor..." << std::endl;
+   
+	std::vector<int> smoothLevels = {0, 1, 5, 20, 50};
+	unsigned int dSize = 2*smoothLevels.size(); // mean,gaussian at each level
+	 
+
+	// === Preparation
+	
+	// Compute the actual curvature values
+	mesh->computeCurvatures();
+
+	// Allocate space for the descriptors
+    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        v->descriptor = Eigen::VectorXd::Zero(dSize);
+	}
+
+
+	// Push the curvatures to vectors
+	unsigned int nVerts = mesh->vertices.size();
+    Eigen::VectorXd currGauss(nVerts);
+    Eigen::VectorXd currMean(nVerts);
+	size_t i = 0;
+    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+		currGauss(i) = v->gaussCurvature;
+		currMean(i) = v->meanCurvature;
+		i++;
+	}
+
+	// Compute a shifted-laplacian matrix for taking averages
+    Eigen::SparseMatrix<double> avgM(nVerts, nVerts);
+    mesh->buildSimpleAverager(avgM);
+
+	// === Smoothing and saving
+
+	// For each of the smoothing levels, smooth an appropriate number of times, then save the descriptor
+	int smoothingStepsCompleted = 0;
+	int iLevel = 0;
+	for(int smoothLevel : smoothLevels) {
+
+		// Smooth as needed
+		while(smoothingStepsCompleted < smoothLevel) {
+
+			currGauss = avgM * currGauss;
+			currMean = avgM * currMean;
+
+			smoothingStepsCompleted++;
+		}
+
+
+		// Save
+		size_t iVert = 0;
+		for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+			v->descriptor(iLevel + 0) = currGauss(iVert);
+			v->descriptor(iLevel + 1) = currMean(iVert);
+			iVert++;
+		}
+		
+		iLevel += 2;
+	}
+
+	std::cout << "... Done computing curvature descriptor." << std::endl;
+}
+
 void Descriptor::normalize()
 {
     int n = (int)mesh->vertices[0].descriptor.size();
@@ -360,6 +425,10 @@ void Descriptor::compute(int descriptor, bool loadEig)
             computeEig(300, loadEig);
             computeWks();
             descriptorName = "wks";
+            break;
+        case CURVE:
+            computeCurve();
+            descriptorName = "curve";
             break;
     }
     

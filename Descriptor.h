@@ -5,6 +5,7 @@
 #define HKS 0
 #define FAST_HKS 1
 #define WKS 2
+#define CURVE 3
 
 class Descriptor {
 public:
@@ -26,6 +27,9 @@ private:
     
     // compute wks
     void computeWks();
+
+    // compute curvature descriptor
+    void computeCurve();
     
     // normalize
     void normalize();
