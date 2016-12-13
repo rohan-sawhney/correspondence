@@ -13,7 +13,7 @@ public:
     Descriptor(Mesh *mesh0);
     
     // compute
-    void compute(int descriptor, bool loadEig = true);
+	void compute(int descriptor, bool loadEig = true, std::string outFilename = "");
     
 private:
     // compute eigenvalues and eigenvectors

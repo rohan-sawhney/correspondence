@@ -406,7 +406,7 @@ void Descriptor::normalize()
     }
 }
 
-void Descriptor::compute(int descriptor, bool loadEig)
+void Descriptor::compute(int descriptor, bool loadEig, std::string outFilename)
 {
     // compute descriptor
     std::string descriptorName;
@@ -436,12 +436,14 @@ void Descriptor::compute(int descriptor, bool loadEig)
     normalize();
     
     // write to file
-    std::string filename = mesh->name;
-    filename.replace(filename.find_last_of(".")+1, 3, descriptorName);
-    std::ofstream out(filename);
+    //std::string filename = mesh->name;
+    //filename.replace(filename.find_last_of(".")+1, 3, descriptorName);
+    std::ofstream out(outFilename);
     
     if (out.is_open()) {
         MeshIO::writeDescriptor(out, *mesh);
         out.close();
-    }
+    } else {
+		std::cout << "Not writing descriptor, no valid path specified" << std::endl;
+	}
 }
