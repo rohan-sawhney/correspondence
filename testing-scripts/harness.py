@@ -21,7 +21,8 @@ nPRIncrements = 500
 def compute_spectrum(inputFile, outputFile, n):
 
     methodLocation = "../methods/laplacian-eigenvec/computeEVecs.py"
-    
+    print("    in " + str(inputFile))
+    print("    out " + str(outputFile))
     # Start timing
     startTime = timer()
     
@@ -409,7 +410,7 @@ def main():
                     print("Computing Spectrum")
                     eigFile = os.path.join(outDir, name + ".eig")
                     print("    eigfile " + str(eigFile))
-                    eigTime = compute_spectrum(inFile, eigFile, 500)
+                    eigTime = compute_spectrum(inFile, eigFile, "500")
 
                 outFile = os.path.join(outDir, name + ".features")
                 print("    outfile " + str(outFile))
