@@ -129,6 +129,7 @@ def evaluateAccuracy(featuresA, featuresB, subsampleRate = 1.0):
 
     nRows, nCols = featuresA.shape
 
+    # NOTE: Duplicated below
     for iRow in range(nRows):
 
         if random.random() > subsampleRate: continue
@@ -147,75 +148,106 @@ def evaluateAccuracy(featuresA, featuresB, subsampleRate = 1.0):
     return result
 
 
+def evaluateAccuracyWithFile(featuresA, featuresB, correspondenceFile, subsampleRate = 1.0):
+
+    result = []
+
+    # Read in the correspondence file
+    correspondences = []
+    with open(correspondenceFile) as cFile:
+
+        for line in cFile:
+
+            if(line[0] == "#"): continue
+
+            items = line.strip().split(",")
+            indA = int(items[0])
+            indB = int(items[1])
+
+            correspondences.append((indA,indB))
+
+
+
+    nRows, nCols = featuresA.shape
+
+    # NOTE: Duplicated above
+    for indA, indB in correspondences:
+
+        if random.random() > subsampleRate: continue
+    
+        # Compute distances
+        iFeatures = featuresA[indA,:]
+        dists = np.linalg.norm(featuresB - iFeatures, axis=1)
+
+        # Find the index at which the matched vertex would lie, after sorting
+        sortedDists = np.argsort(dists)
+        sortedInd = np.where(sortedDists == indB)[0][0]
+        relativeInd = float(sortedInd) / nRows
+
+        result.append(relativeInd)
+
+    return result
+
+
 # Performs all appropriate pairwise calls to evaluateAccuracy and returns
 # the merged result
-def evaluateAllAccuracies(groupSet, featureDirectory, accuracyDirectory):
+def evaluateAllAccuracies(pairList, featureDirectory, accuracyDirectory, correspondenceDirectory = ""):
 
 
-    for groupName in groupSet:
-   
-        print("Evaluating group: " + groupName)
-
-        group = groupSet[groupName]
-
-        for iGroup in range(len(group)):
-
-            iFilename = os.path.join(featureDirectory, group[iGroup] + ".features")
-            
-
-            # Evaluate the how well we matched the corresponding vertices for each pair in the group
-            for jGroup in range(len(group)):
-
-                if iGroup == jGroup: continue
-                print("Evaluating pair: " + group[iGroup] + " and " + group[jGroup])
-            
-                jFilename = os.path.join(featureDirectory, group[jGroup] + ".features")
-
-                # The path to put the result at
-                resultFilename = os.path.join(accuracyDirectory, group[iGroup] + "-" + group[jGroup] + ".accuracy")
-                
-                # Skip computation if the file exists 
-                if(os.path.exists(resultFilename)):
-                    if(args.force):
-                        os.remove(resultFilename)
-                    else:
-                        print("Skipping accuracy computation for " + group[iGroup] + "---" + group[jGroup] + ", file already present")
-                        continue
-
-
-                # Assess the result
-                # NOTE THAT WE ARE SUBSAMPLING BY A LOT RIGHT NOW
-                pairwiseResult = evaluateAccuracy(parseFeatureFile(iFilename), parseFeatureFile(jFilename), 0.001)
-
-                # Compute precision-recall samples 
-                pairwisePR = computePrecisionRecall(pairwiseResult)
+    skipCount = 0
+    for meshA,meshB in pairList:
            
-                # Write the samples to file
-                np.savetxt(resultFilename, pairwisePR[1], fmt="%.8f")
-                 
+        meshAFilename = os.path.join(featureDirectory, meshA + ".features")
+        meshBFilename = os.path.join(featureDirectory, meshB + ".features")
+
+        # The path to put the result at
+        resultFilename = os.path.join(accuracyDirectory, meshA + "-" + meshB + ".accuracy")
+        
+        # Skip computation if the file exists 
+        if(os.path.exists(resultFilename)):
+            if(args.force):
+                os.remove(resultFilename)
+            else:
+                # print("Skipping accuracy computation for " + meshA + "---" + meshB + ", file already present")
+                skipCount += 1
+                continue
+
+        print("Evaluating pair: " + meshA + ' -- ' + meshB)
 
 
-def parseAccuracies(groupSet, accuracyDirectory):
+        # Assess the result
+        # NOTE THAT WE ARE SUBSAMPLING BY A LOT RIGHT NOW
+        subsampleRate = 0.001
+
+        if(correspondenceDirectory == ""):
+            pairwiseResult = evaluateAccuracy(parseFeatureFile(meshAFilename), parseFeatureFile(meshBFilename), subsampleRate)
+        else:
+            correspondenceFilename = os.path.join(correspondenceDirectory, meshA + "-" + meshB + ".groundtruth")
+            pairwiseResult = evaluateAccuracyWithFile(parseFeatureFile(meshAFilename), parseFeatureFile(meshBFilename), correspondenceFilename, subsampleRate)
+
+        # Compute precision-recall samples 
+        pairwisePR = computePrecisionRecall(pairwiseResult)
+   
+        # Write the samples to file
+        np.savetxt(resultFilename, pairwisePR[1], fmt="%.8f")
+                
+    if(skipCount > 0):
+        print("Skipped evaluating accuracies for " + str(skipCount) + " methods that were already present")
+
+def parseAccuracies(pairList, accuracyDirectory):
   
     print("Reading all accuracies from  " + accuracyDirectory)
 
     allAccuracies= []
-
-    for groupName in groupSet:
+    
+    for meshA,meshB in pairList:
    
-        group = groupSet[groupName]
+        # print("Parsing accuracy for pair: " + meshA + ' -- ' + meshB)
 
-        for iGroup in range(len(group)):
-
-            # Evaluate the how well we matched the corresponding vertices for each pair in the group
-            for jGroup in range(len(group)):
-
-                if iGroup == jGroup: continue
-
-                resultFilename = os.path.join(accuracyDirectory, group[iGroup] + "-" + group[jGroup] + ".accuracy")
-                acc = np.loadtxt(resultFilename)
-                
-                allAccuracies.append(acc)
+        resultFilename = os.path.join(accuracyDirectory, meshA + "-" + meshB + ".accuracy")
+        acc = np.loadtxt(resultFilename)
+        
+        allAccuracies.append(acc)
 
     return allAccuracies
 
@@ -240,7 +272,7 @@ def computePrecisionRecall(relativeIndexVals):
 
 ### Plotters
 
-def plotMethodAccuracy(methodName, accuracyLists, plotDir):
+def plotMethodAccuracy(datasetName, methodName, accuracyLists, plotDir):
 
     print("Plotting accuracy for method " + methodName)
 
@@ -248,7 +280,7 @@ def plotMethodAccuracy(methodName, accuracyLists, plotDir):
     xData = np.linspace(0, 1, num=nPRIncrements)
 
     sns.set(font_scale=2) 
-    plt.title(methodName + " accuracy")
+    plt.title(datasetName + " -- " + methodName + " accuracy")
     plt.xlabel("Threshold")
     plt.ylabel("Fraction under threshold")
 
@@ -256,7 +288,7 @@ def plotMethodAccuracy(methodName, accuracyLists, plotDir):
     # sns.tsplot(yData, xData, ci = [68,95,99.99])
     # sns.tsplot(yData, xData, err_style="boot_traces", n_boot=500)
 
-    outname = plotDir + methodName + "-accuracy.pdf"
+    outname = plotDir + datasetName + "-" + methodName + "-accuracy.pdf"
     plt.savefig(outname)
     plt.clf()
 
@@ -270,41 +302,23 @@ def prettyPrintTime(elapsed):
 
 
 
-def parseGroupFile(filename):
+def parsePairFile(filename):
 
-    print("Parsing group file " + filename)
+    print("Parsing pair file " + filename)
 
-    groupLists = {}
+    pairs = []
 
-    with open(filename) as groupFile:
-        while True:
+    with open(filename) as pairFile:
+        for line in pairFile:
 
-            try:
-                line = next(groupFile).strip()
-            except:
-                break
+            if line[0] == "#": continue
 
-            if(line[0] == '#'): continue
+            items = line.strip().split(",")
+            pairs.append((items[0], items[1]))
 
-            # Must start with "GROUP:"
-            line = line[6:]
+    print("Found " + str(len(pairs)) + " pairs")
 
-            # Parse out name and count
-            items = line.split(",")
-            gName = items[0]
-            gCount = int(items[1])
-
-            # Accumulate the entries in the group
-            gList = []
-            for i in range(gCount):
-                line = next(groupFile)
-                gList.append(line.strip())
-                
-            groupLists[gName] = gList
-
-    print("Found " + str(len(groupLists)) + " groups")
-
-    return groupLists
+    return pairs 
 
 
 ### Primary method
@@ -328,11 +342,15 @@ def main():
     plotRoot = os.path.join(root, "plots/")
 
     # Build dataset lists
-    # datasets = ["TOSCA","FAUST"]
-    datasets = ["TOSCA"]
+    datasets = ["TOSCA","FAUST"]
+    # datasets = ["TOSCA"]
+
+    correspondenceDir = {"TOSCA" : "",
+                         "FAUST" : "ground_truth"}
 
     # Build method lists
-    methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
+    # methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
+    methods = ["strawman", "curvature"]
     methodFunctions = {"strawman" : eval_strawman,
                        "curvature" : eval_curvature,
                        "laplacian-eigenvecs" : eval_laplacian,
@@ -396,12 +414,12 @@ def main():
                     os.makedirs(outDir)
             
                 # Open a timings file, abort if it is already present
-                timingsFilename = os.path.join(featuresRoot, dataset, method, "timings.txt")
+                timingsFilename = os.path.join(outDir, name + ".timing")
                 if(os.path.exists(timingsFilename)):
                     if(args.force):
                         os.remove(timingsFilename)
                     else:
-                        print("Skipping method: " + method + " on dataset " + dataset + ". Timings file already present")
+                        # print("Skipping method: " + method + " on dataset " + dataset + ". Timings file already present")
                         continue
                 timingsFile = open(timingsFilename, 'w')
 
@@ -420,7 +438,8 @@ def main():
                     elapsedTime = methodFunctions[method](inFile, outFile)
                 print("    elapsed time: " + prettyPrintTime(elapsedTime))
 
-                timingsFile.write(name + "," + str(elapsedTime) + "\n")
+                timingsFile.write(str(elapsedTime) + "\n")
+                timingsFile.close()
 
 
     #### Evaluate accuracy ####
@@ -436,9 +455,9 @@ def main():
         datasetPath = os.path.join(dataRoot, dataset)
 
         # Parse the file that tells us how the dataset is partitioned
-        # in to corresponding groups
-        groupFilename = os.path.join(datasetPath, "partitions.txt")
-        groupList = parseGroupFile(groupFilename)
+        # in to pairs
+        pairFilename = os.path.join(datasetPath, "pairs.txt")
+        pairList = parsePairFile(pairFilename)
 
         # Evaluate each method
         for method in methods:
@@ -446,11 +465,18 @@ def main():
             featuresDir = os.path.join(featuresRoot, dataset, method)
             evaluteDir = os.path.join(evaluateRoot, dataset, method)
             
+            if(correspondenceDir[dataset] == ""):
+                correspondenceDirectory = ""
+            else:
+                correspondenceDirectory = os.path.join(datasetPath, correspondenceDir[dataset])
+
+
             # Create output directory as needed
             if(not os.path.exists(evaluteDir)):
                 os.makedirs(evaluteDir)
 
-            evaluateAllAccuracies(groupList, featuresDir, evaluteDir)
+
+            evaluateAllAccuracies(pairList, featuresDir, evaluteDir, correspondenceDirectory)
 
 
 
@@ -464,9 +490,9 @@ def main():
         datasetPath = os.path.join(dataRoot, dataset)
 
         # Parse the file that tells us how the dataset is partitioned
-        # in to corresponding groups
-        groupFilename = os.path.join(datasetPath, "partitions.txt")
-        groupList = parseGroupFile(groupFilename)
+        # in to corresponding pairs
+        pairFilename = os.path.join(datasetPath, "pairs.txt")
+        pairList = parsePairFile(pairFilename)
 
         methodAccuracies = {}
 
@@ -475,10 +501,10 @@ def main():
             evaluteDir = os.path.join(evaluateRoot, dataset, method)
    
             # Read in the evaluation results     
-            evalResults = parseAccuracies(groupList, evaluteDir)
+            evalResults = parseAccuracies(pairList, evaluteDir)
 
             # Make a plot of the evaluation results
-            plotMethodAccuracy(method, evalResults, plotRoot)       
+            plotMethodAccuracy(dataset, method, evalResults, plotRoot)       
 
             # TODO ROHAN: Accumulate to make a merged plot
 
