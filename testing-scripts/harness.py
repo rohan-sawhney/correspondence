@@ -366,18 +366,12 @@ def main():
     plotRoot = os.path.join(root, "plots/")
 
     # Build dataset lists
-<<<<<<< HEAD
-    # datasets = ["TOSCA","FAUST"]
-    datasets = ["TOSCA"]
-    
-=======
     datasets = ["TOSCA","FAUST"]
     # datasets = ["TOSCA"]
 
     correspondenceDir = {"TOSCA" : "",
                          "FAUST" : "ground_truth"}
 
->>>>>>> origin/master
     # Build method lists
     # methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
     methods = ["strawman", "curvature"]
