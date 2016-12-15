@@ -27,7 +27,7 @@ private:
     
     // compute wks
     void computeWks();
-
+    
     // compute curvature descriptor
     void computeCurve();
     

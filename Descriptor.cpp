@@ -324,69 +324,113 @@ void Descriptor::computeWks()
     }
 }
 
-void Descriptor::computeCurve() {
+double computeGaussCurvature(Mesh *mesh, Eigen::VectorXd& K)
+{
+    double maxGauss = -INFINITY;
+    for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        K(v->index) = v->angleDefect() / v->dualArea();
+        if (maxGauss < fabs(K(v->index))) maxGauss = fabs(K(v->index));
+    }
+    
+    return maxGauss;
+}
 
-	std::cout << "Computing curvature descriptor..." << std::endl;
-   
+double computeMeanCurvature(Mesh *mesh, Eigen::VectorXd& H)
+{
+    int v = (int)mesh->vertices.size();
+    
+    // build laplace matrix
+    Eigen::SparseMatrix<double> L(v, v);
+    buildAdjacency(mesh, L);
+    Eigen::SparseMatrix<double> A(v, v);
+    buildAreaMatrix(mesh, A, 1.0);
+    L = A.cwiseInverse()*L;
+    
+    Eigen::MatrixXd x;
+    x.resize((int)v, 3);
+    for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        x.row(v->index) = v->position;
+    }
+    x = L*x;
+    
+    // set absolute mean curvature
+    double maxMean = -INFINITY;
+    for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        H(v->index) = 0.5 * x.row(v->index).norm();
+        if (maxMean < H(v->index)) maxMean = H(v->index);
+    }
+    
+    return maxMean;
+}
+
+void computeCurvatures(Mesh *mesh, Eigen::VectorXd& K, Eigen::VectorXd& H)
+{
+    double maxGauss = computeGaussCurvature(mesh, K);
+    double maxMean = computeMeanCurvature(mesh, H);
+    
+    // normalize gauss and mean curvature
+    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        K(v->index) /= maxGauss;
+        H(v->index) /= maxMean;
+    }
+}
+
+void buildSimpleAverager(Mesh *mesh, Eigen::SparseMatrix<double>& L)
+{
+    std::vector<Eigen::Triplet<double>> LTriplet;
+    
+    for (VertexCIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
+        HalfEdgeCIter he = v->he;
+        double degree = v->degree();
+        do {
+            LTriplet.push_back(Eigen::Triplet<double>(v->index, he->flip->vertex->index, 1.0/degree));
+            he = he->flip->next;
+        } while (he != v->he);
+    }
+    
+    L.setFromTriplets(LTriplet.begin(), LTriplet.end());
+}
+
+void Descriptor::computeCurve()
+{
 	std::vector<int> smoothLevels = {0, 1, 5, 20, 50};
-	unsigned int dSize = 2*smoothLevels.size(); // mean,gaussian at each level
+	int dSize = 2*(int)smoothLevels.size(); // mean, gaussian at each level
 	 
+	// compute the mean and gaussian curvature values
+    int v = (int)mesh->vertices.size();
+    Eigen::VectorXd K(v);
+    Eigen::VectorXd H(v);
+	computeCurvatures(mesh, K, H);
 
-	// === Preparation
-	
-	// Compute the actual curvature values
-	mesh->computeCurvatures();
-
-	// Allocate space for the descriptors
+	// allocate space for the descriptors
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
         v->descriptor = Eigen::VectorXd::Zero(dSize);
 	}
 
+	// compute a shifted-laplacian matrix for taking averages
+    Eigen::SparseMatrix<double> avgM(v, v);
+    buildSimpleAverager(mesh, avgM);
 
-	// Push the curvatures to vectors
-	unsigned int nVerts = mesh->vertices.size();
-    Eigen::VectorXd currGauss(nVerts);
-    Eigen::VectorXd currMean(nVerts);
-	size_t i = 0;
-    for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-		currGauss(i) = v->gaussCurvature;
-		currMean(i) = v->meanCurvature;
-		i++;
-	}
-
-	// Compute a shifted-laplacian matrix for taking averages
-    Eigen::SparseMatrix<double> avgM(nVerts, nVerts);
-    mesh->buildSimpleAverager(avgM);
-
-	// === Smoothing and saving
-
-	// For each of the smoothing levels, smooth an appropriate number of times, then save the descriptor
+	// for each of the smoothing levels, smooth an appropriate number of times, then save the descriptor
 	int smoothingStepsCompleted = 0;
 	int iLevel = 0;
-	for(int smoothLevel : smoothLevels) {
-
-		// Smooth as needed
+	for (int smoothLevel : smoothLevels) {
+		// smooth as needed
 		while(smoothingStepsCompleted < smoothLevel) {
-
-			currGauss = avgM * currGauss;
-			currMean = avgM * currMean;
+			K = avgM * K;
+			H = avgM * H;
 
 			smoothingStepsCompleted++;
 		}
-
-
-		// Save
-		size_t iVert = 0;
+        
+		// save
 		for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-			v->descriptor(iLevel + 0) = currGauss(iVert);
-			v->descriptor(iLevel + 1) = currMean(iVert);
-			iVert++;
+			v->descriptor(iLevel + 0) = K(v->index);
+			v->descriptor(iLevel + 1) = H(v->index);
 		}
 		
 		iLevel += 2;
 	}
-
-	std::cout << "... Done computing curvature descriptor." << std::endl;
 }
 
 void Descriptor::normalize()
@@ -437,10 +481,7 @@ void Descriptor::compute(int descriptor, bool loadEig, std::string outFilename)
     normalize();
     
     // write to file
-    //std::string filename = mesh->name;
-    //filename.replace(filename.find_last_of(".")+1, 3, descriptorName);
     std::ofstream out(outFilename);
-    
     if (out.is_open()) {
         MeshIO::writeDescriptor(out, *mesh);
         out.close();

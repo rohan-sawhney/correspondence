@@ -100,11 +100,12 @@ void printInstructions()
     std::cerr << "1: compute hks\n"
               << "2: compute fast hks\n"
               << "3: compute wks\n"
-              << "4: toggle descriptor\n"
-              << "5: toggle feature points\n"
-              << "6: generate patches\n"
-              << "7: toggle normals\n"
-              << "8: toggle wireframe\n"
+              << "4: compute curvature\n"
+              << "5: toggle descriptor\n"
+              << "6: toggle feature points\n"
+              << "7: generate patches\n"
+              << "8: toggle normals\n"
+              << "9: toggle wireframe\n"
               << "→/←: change descriptor level\n"
               << "w/s: move in/out\n"
               << "a/d: move left/right\n"
@@ -365,6 +366,13 @@ void keyboardPressed(unsigned char key, int x, int y)
         if (showDescriptor) updateColor();
         
     } else if (keys[DIGIT_OFFSET + 4]) {
+        Descriptor descriptor(&mesh);
+        descriptor.compute(CURVE);
+        computedDescriptor = true;
+        setFeaturePoints();
+        if (showDescriptor) updateColor();
+        
+    } else if (keys[DIGIT_OFFSET + 5]) {
         showDescriptor = !showDescriptor;
         if (showDescriptor && !computedDescriptor) showDescriptor = false;
         else {
@@ -375,16 +383,16 @@ void keyboardPressed(unsigned char key, int x, int y)
             glutSetWindowTitle(title.c_str());
         }
         
-    } else if (keys[DIGIT_OFFSET + 5]) {
+    } else if (keys[DIGIT_OFFSET + 6]) {
         showFeaturePoints = !showFeaturePoints;
         
-    } else if (keys[DIGIT_OFFSET + 6]) {
+    } else if (keys[DIGIT_OFFSET + 7]) {
         if (computedDescriptor) setPatchColors();
         
-    } else if (keys[DIGIT_OFFSET + 7]) {
+    } else if (keys[DIGIT_OFFSET + 8]) {
         showNormals = !showNormals;
         
-    } else if (keys[DIGIT_OFFSET + 8]) {
+    } else if (keys[DIGIT_OFFSET + 9]) {
         showWireframe = !showWireframe;
         
     } else if (keys['a']) {
@@ -453,7 +461,8 @@ void printUsage(char *programName)
 {
     std::cout << "Usage: "
               << programName
-              << " -descriptor 0/1/2/3 -obj_path PATH -shader_path PATH"
+              << " -descriptor 0/1/2/3 -obj_path PATH -load_eig 0/1"
+              << " -output_path PATH -shader_path PATH"
               << std::endl;
 }
 
@@ -463,8 +472,9 @@ int main(int argc, char** argv)
     // parse
     int descriptorName = -1;
     bool objPathSpecified = false;
-    bool shaderPathSpecified = false;
+    bool loadEig = true;
     bool outputPathSpecified = false;
+    bool shaderPathSpecified = false;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "-descriptor" && i+1 < argc) {
             descriptorName = std::atoi(argv[i+1]);
@@ -475,13 +485,18 @@ int main(int argc, char** argv)
             objPathSpecified = true;
             i++;
             
-        } else if (std::string(argv[i]) == "-shader_path" && i+1 < argc) {
-            shaderPath = argv[i+1];
-            shaderPathSpecified = true;
+        } else if (std::string(argv[i]) == "-load_eig" && i+1 < argc) {
+            loadEig = (bool)argv[i+1];
             i++;
+            
         } else if (std::string(argv[i]) == "-output_path" && i+1 < argc) {
             outputPath = argv[i+1];
             outputPathSpecified = true;
+            i++;
+            
+        } else if (std::string(argv[i]) == "-shader_path" && i+1 < argc) {
+            shaderPath = argv[i+1];
+            shaderPathSpecified = true;
             i++;
         }
     }
@@ -512,9 +527,9 @@ int main(int argc, char** argv)
             glutSpecialFunc(special);
             glutMotionFunc(mouse);
             
-            if (descriptorName >= HKS && descriptorName <= WKS) {
+            if (descriptorName >= HKS && descriptorName <= CURVE) {
                 Descriptor descriptor(&mesh);
-                descriptor.compute(descriptorName);
+                descriptor.compute(descriptorName, loadEig);
                 computedDescriptor = showDescriptor = true;
                 setFeaturePoints();
                 updateColor();
@@ -527,7 +542,7 @@ int main(int argc, char** argv)
         } else if (descriptorName >= HKS && descriptorName <= CURVE) {
             if (mesh.read(path)) {
                 Descriptor descriptor(&mesh);
-                descriptor.compute(descriptorName, false, outputPath);
+                descriptor.compute(descriptorName, loadEig, outputPath);
             }
             
         } else {

@@ -26,15 +26,6 @@ public:
     // projection
     Projection projection;
   
-    // gaussian curvature, normalized between -1 and 1
-    double gaussCurvature;
-    
-    // mean curvature, normalized between -1 and 1
-    double meanCurvature;
- 
-    // principal curvatures
-    double k1, k2;
-
     // 2pi - ∑ø
     double angleDefect() const;
  
