@@ -18,37 +18,43 @@ nPRIncrements = 500
 ### Wrappers to compute the result each of the algorithms.
 # Should return a wall clock time in seconds in addition to writing output files
 
-def eval_strawman(inputFile, outputFile):
+def compute_spectrum(inputFile, outputFile, n):
 
+    methodLocation = "../methods/laplacian-eigenvec/computeEVecs.py"
+    
+    # Start timing
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen(["python", methodLocation, n, inputFile, outputFile])
+    runner.wait()
+    
+    # Finish timing
+    elapsedTime = timer() - startTime
+    
+    return elapsedTime
+
+
+def eval_strawman(inputFile, outputFile):
+   
     methodLocation = "../methods/strawman/strawman-features.py"
-  
-    # Start timing 
+    
+    # Start timing
     startTime = timer()
     
     # Start the process
     runner = subprocess.Popen(["python", methodLocation, inputFile, outputFile])
     runner.wait()
     
-    # Finish timing 
+    # Finish timing
     elapsedTime = timer() - startTime
-
+    
     return elapsedTime
+
 
 def eval_laplacian(inputFile, outputFile):
 
-    methodLocation = "../methods/laplacian-eigenvec/computeEVecs.py"
-  
-    # Start timing 
-    startTime = timer()
-    
-    # Start the process
-    runner = subprocess.Popen(["python", methodLocation, "30", inputFile, outputFile])
-    runner.wait()
-    
-    # Finish timing 
-    elapsedTime = timer() - startTime
-
-    return elapsedTime
+    return compute_spectrum(inputFile, outputFile, "30")
 
 
 def eval_curvature(inputFile, outputFile):
@@ -68,11 +74,40 @@ def eval_curvature(inputFile, outputFile):
     return elapsedTime
 
 
+def eval_HKS(inputFile, outputFile, eigFile = ""):
 
-def eval_HKS():
-    pass
+    methodLocation = "../build/correspond"
+    
+    # Start timing
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen([methodLocation, "-descriptor", "0", "-obj_path", inputFile,
+                               "-eig_path", eigFile, "-output_path", outputFile])
+    runner.wait()
+    
+    # Finish timing
+    elapsedTime = timer() - startTime
+    
+    return elapsedTime
 
 
+def eval_WKS(inputFile, outputFile, eigFile = ""):
+
+    methodLocation = "../build/correspond"
+    
+    # Start timing
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen([methodLocation, "-descriptor", "2", "-obj_path", inputFile,
+                               "-eig_path", eigFile, "-output_path", outputFile])
+    runner.wait()
+    
+    # Finish timing
+    elapsedTime = timer() - startTime
+    
+    return elapsedTime
 
 ### Evaluate the accuracy of a method
 
@@ -297,23 +332,28 @@ def main():
     datasets = ["TOSCA"]
 
     # Build method lists
-    methods = ["strawman", "curvature", "laplacian-eigenvecs"]
+    methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
     methodFunctions = {"strawman" : eval_strawman,
                        "curvature" : eval_curvature,
                        "laplacian-eigenvecs" : eval_laplacian,
-                       "HKS" : eval_HKS}
+                       "HKS" : eval_HKS,
+                       "WKS" : eval_WKS}
 
     # Three stages:
     # 1) Run and benchmark algorithms to generate features on the datasets
     # 2) Evaluate the goodness of each algorithm using the ground truth data
     # 3) Generate all kinds of plots
 
-
     #### Run algorithms ####
     for dataset in datasets:
 
         # Handle directories for this dataset and method
         datasetPath = os.path.join(dataRoot, dataset)
+        
+        # Ensure the dataset directory exists
+        if(not os.path.exists(datasetPath)):
+            print("ERROR: Could not find dataset " + datasetPath)
+            exit()
 
         # Make sure that there is at least one obj file in the dataset
         haveOBJ = False
@@ -324,61 +364,59 @@ def main():
             print("ERROR: Found 0 obj files for dataset at " + datasetPath)
             exit()
 
+        ### Process each obj file for the dataset
+        for f in os.listdir(datasetPath):
 
-        # Run each method
-        for method in methods:
+            fullname = os.path.join(datasetPath, f)
 
-            # Ensure the dataset directory exists
-            if(not os.path.exists(datasetPath)):
-                print("ERROR: Could not find dataset " + datasetPath)
-                exit()
-            
-            # Create output location if needed
-            outDir = os.path.join(featuresRoot, dataset, method)
-            if(not os.path.exists(outDir)):
-                os.makedirs(outDir)
-            
-            # Open a timings file, abort if it is already present
-            timingsFilename = os.path.join(featuresRoot, dataset, method, "timings.txt")
-            if(os.path.exists(timingsFilename)):
-                if(args.force):
-                    os.remove(timingsFilename)
-                else:
-                    print("Skipping method: " + method + " on dataset " + dataset + ". Timings file already present")
-                    continue
-            timingsFile = open(timingsFilename, 'w')
+            if not os.path.isfile(fullname):
+                continue
+            if not f.endswith(".obj"):
+                continue
 
+            basename = os.path.basename(f)
+            name, _ = os.path.splitext(basename)
+            fullnameNoExt, _ = os.path.splitext(fullname)
 
-            ### Process each obj file for the dataset
-            for f in os.listdir(datasetPath):
+            inFile = fullname
 
-                fullname = os.path.join(datasetPath, f)
-
-                if not os.path.isfile(fullname):
-                    continue
-                if not f.endswith(".obj"):
-                    continue
-
-                basename = os.path.basename(f)
-                name, _ = os.path.splitext(basename)
-                fullnameNoExt, _ = os.path.splitext(fullname)
-
-                inFile = fullname
-
-                print("\nProcessing file " + str(name))
-                print("  infile " + str(inFile))
-
+            print("\nProcessing file " + str(name))
+            print("  infile " + str(inFile))
+                
+            # Run each method
+            eigTime = 0
+            for method in methods:
+                
                 print("  Using method " + method)
-           
+    
+                # Create output location if needed
+                outDir = os.path.join(featuresRoot, dataset, method)
+                if(not os.path.exists(outDir)):
+                    os.makedirs(outDir)
+            
+                # Open a timings file, abort if it is already present
+                timingsFilename = os.path.join(featuresRoot, dataset, method, "timings.txt")
+                if(os.path.exists(timingsFilename)):
+                    if(args.force):
+                        os.remove(timingsFilename)
+                    else:
+                        print("Skipping method: " + method + " on dataset " + dataset + ". Timings file already present")
+                        continue
+                timingsFile = open(timingsFilename, 'w')
+
+                if (method == "hks"):
+                    print("Computing Spectrum")
+                    eigFile = os.path.join(outDir, name + ".eig")
+                    print("    eigfile " + str(eigFile))
+                    eigTime = compute_spectrum(inFile, eigFile, 500)
+
                 outFile = os.path.join(outDir, name + ".features")
                 print("    outfile " + str(outFile))
-           
-                elapsedTime = methodFunctions[method](inFile, outFile)
+
+                elapsedTime = eigTime + methodFunctions[method](inFile, outFile)
                 print("    elapsed time: " + prettyPrintTime(elapsedTime))
 
                 timingsFile.write(name + "," + str(elapsedTime) + "\n")
-
-
 
 
     #### Evaluate accuracy ####
@@ -438,8 +476,9 @@ def main():
             # Make a plot of the evaluation results
             plotMethodAccuracy(method, evalResults, plotRoot)       
 
-            # Accumulate to make a merged plot
+            # TODO ROHAN: Accumulate to make a merged plot
 
+            # TODO ROHAN: Performance vs accuracy - area under curve
 
 
         # Make a combined plot for all methods
