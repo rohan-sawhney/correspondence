@@ -337,8 +337,8 @@ def main():
     methodFunctions = {"strawman" : eval_strawman,
                        "curvature" : eval_curvature,
                        "laplacian-eigenvecs" : eval_laplacian,
-                       "HKS" : eval_HKS,
-                       "WKS" : eval_WKS}
+                       "hks" : eval_HKS,
+                       "wks" : eval_WKS}
 
     # Three stages:
     # 1) Run and benchmark algorithms to generate features on the datasets
