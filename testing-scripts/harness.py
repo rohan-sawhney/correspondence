@@ -74,7 +74,7 @@ def eval_curvature(inputFile, outputFile):
     return elapsedTime
 
 
-def eval_HKS(inputFile, outputFile, eigFile = ""):
+def eval_HKS(inputFile, outputFile, eigFile):
 
     methodLocation = "../build/correspond"
     
@@ -92,7 +92,7 @@ def eval_HKS(inputFile, outputFile, eigFile = ""):
     return elapsedTime
 
 
-def eval_WKS(inputFile, outputFile, eigFile = ""):
+def eval_WKS(inputFile, outputFile, eigFile):
 
     methodLocation = "../build/correspond"
     
@@ -404,6 +404,7 @@ def main():
                         continue
                 timingsFile = open(timingsFilename, 'w')
 
+                eigFile = ""
                 if (method == "hks"):
                     print("Computing Spectrum")
                     eigFile = os.path.join(outDir, name + ".eig")
@@ -413,7 +414,10 @@ def main():
                 outFile = os.path.join(outDir, name + ".features")
                 print("    outfile " + str(outFile))
 
-                elapsedTime = eigTime + methodFunctions[method](inFile, outFile)
+                if (method == "hks" or method == "wks"):
+                    elapsedTime = eigTime + methodFunctions[method](inFile, outFile, eigFile)
+                else:
+                    elapsedTime = methodFunctions[method](inFile, outFile)
                 print("    elapsed time: " + prettyPrintTime(elapsedTime))
 
                 timingsFile.write(name + "," + str(elapsedTime) + "\n")
