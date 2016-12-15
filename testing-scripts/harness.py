@@ -386,6 +386,7 @@ def main():
                 
             # Run each method
             eigTime = 0
+            eigFile = ""
             for method in methods:
                 
                 print("  Using method " + method)
@@ -405,7 +406,6 @@ def main():
                         continue
                 timingsFile = open(timingsFilename, 'w')
 
-                eigFile = ""
                 if (method == "hks"):
                     print("Computing Spectrum")
                     eigFile = os.path.join(outDir, name + ".eig")
