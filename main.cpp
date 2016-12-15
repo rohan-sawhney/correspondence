@@ -14,6 +14,7 @@ GLuint lightUbo;
 
 std::string path;
 std::string shaderPath;
+std::string outputPath;
 Shader meshShader;
 Shader normalShader;
 Shader wireframeShader;
@@ -452,7 +453,7 @@ void printUsage(char *programName)
 {
     std::cout << "Usage: "
               << programName
-              << "-descriptor 0/1/2 -obj_path PATH -shader_path PATH"
+              << " -descriptor 0/1/2/3 -obj_path PATH -shader_path PATH"
               << std::endl;
 }
 
@@ -463,6 +464,7 @@ int main(int argc, char** argv)
     int descriptorName = -1;
     bool objPathSpecified = false;
     bool shaderPathSpecified = false;
+    bool outputPathSpecified = false;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "-descriptor" && i+1 < argc) {
             descriptorName = std::atoi(argv[i+1]);
@@ -476,6 +478,10 @@ int main(int argc, char** argv)
         } else if (std::string(argv[i]) == "-shader_path" && i+1 < argc) {
             shaderPath = argv[i+1];
             shaderPathSpecified = true;
+            i++;
+        } else if (std::string(argv[i]) == "-output_path" && i+1 < argc) {
+            outputPath = argv[i+1];
+            outputPathSpecified = true;
             i++;
         }
     }
@@ -518,10 +524,10 @@ int main(int argc, char** argv)
             
             glutMainLoop();
         
-        } else if (descriptorName >= HKS && descriptorName <= WKS) {
+        } else if (descriptorName >= HKS && descriptorName <= CURVE) {
             if (mesh.read(path)) {
                 Descriptor descriptor(&mesh);
-                descriptor.compute(descriptorName, false);
+                descriptor.compute(descriptorName, false, outputPath);
             }
             
         } else {

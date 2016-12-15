@@ -34,6 +34,40 @@ def eval_strawman(inputFile, outputFile):
 
     return elapsedTime
 
+def eval_laplacian(inputFile, outputFile):
+
+    methodLocation = "../methods/laplacian-eigenvec/computeEVecs.py"
+  
+    # Start timing 
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen(["python", methodLocation, "30", inputFile, outputFile])
+    runner.wait()
+    
+    # Finish timing 
+    elapsedTime = timer() - startTime
+
+    return elapsedTime
+
+
+def eval_curvature(inputFile, outputFile):
+
+    methodLocation = "../build/correspond"
+  
+    # Start timing 
+    startTime = timer()
+    
+    # Start the process
+    runner = subprocess.Popen([methodLocation, "-descriptor", "3", "-obj_path", inputFile, "-output_path", outputFile])
+    runner.wait()
+    
+    # Finish timing 
+    elapsedTime = timer() - startTime
+
+    return elapsedTime
+
+
 
 def eval_HKS():
     pass
@@ -45,7 +79,7 @@ def eval_HKS():
 # Parses a feature file in to a numpy array
 def parseFeatureFile(featureFile):
 
-    return np.loadtxt(featureFile, delimiter = ",") 
+    return np.loadtxt(featureFile)
 
 
 # Takes two same-shaped input arrays, each representing a mesh, where the i'th row is
@@ -173,6 +207,8 @@ def computePrecisionRecall(relativeIndexVals):
 
 def plotMethodAccuracy(methodName, accuracyLists, plotDir):
 
+    print("Plotting accuracy for method " + methodName)
+
     yData = np.array(accuracyLists)
     xData = np.linspace(0, 1, num=nPRIncrements)
 
@@ -187,7 +223,7 @@ def plotMethodAccuracy(methodName, accuracyLists, plotDir):
 
     outname = plotDir + methodName + "-accuracy.pdf"
     plt.savefig(outname)
-
+    plt.clf()
 
 ### Helpers
 def prettyPrintTime(elapsed):
@@ -261,8 +297,10 @@ def main():
     datasets = ["TOSCA"]
 
     # Build method lists
-    methods = ["strawman"]
+    methods = ["strawman", "curvature", "laplacian-eigenvecs"]
     methodFunctions = {"strawman" : eval_strawman,
+                       "curvature" : eval_curvature,
+                       "laplacian-eigenvecs" : eval_laplacian,
                        "HKS" : eval_HKS}
 
     # Three stages:
@@ -365,6 +403,11 @@ def main():
 
             featuresDir = os.path.join(featuresRoot, dataset, method)
             evaluteDir = os.path.join(evaluateRoot, dataset, method)
+            
+            # Create output directory as needed
+            if(not os.path.exists(evaluteDir)):
+                os.makedirs(evaluteDir)
+
             evaluateAllAccuracies(groupList, featuresDir, evaluteDir)
 
 
