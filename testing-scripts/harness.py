@@ -349,8 +349,8 @@ def main():
                          "FAUST" : "ground_truth"}
 
     # Build method lists
-    # methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
-    methods = ["strawman", "curvature"]
+    methods = ["strawman", "curvature", "laplacian-eigenvecs", "hks", "wks"]
+    # methods = ["strawman", "curvature", "laplacian-eigenvecs"]
     methodFunctions = {"strawman" : eval_strawman,
                        "curvature" : eval_curvature,
                        "laplacian-eigenvecs" : eval_laplacian,
@@ -421,13 +421,15 @@ def main():
                     else:
                         # print("Skipping method: " + method + " on dataset " + dataset + ". Timings file already present")
                         continue
-                timingsFile = open(timingsFilename, 'w')
+
+                # NOTE TODO This is really sensitive, the variable eigTime needs to be preserved from a pervious loop iteration,
+                #           so this will yield incorrect results if one is hks is skipped and wks is not.
 
                 if (method == "hks"):
                     print("Computing Spectrum")
                     eigFile = os.path.join(outDir, name + ".eig")
                     print("    eigfile " + str(eigFile))
-                    eigTime = compute_spectrum("500", "y", inFile, eigFile)
+                    eigTime = compute_spectrum("300", "y", inFile, eigFile)
 
                 outFile = os.path.join(outDir, name + ".features")
                 print("    outfile " + str(outFile))
@@ -438,6 +440,7 @@ def main():
                     elapsedTime = methodFunctions[method](inFile, outFile)
                 print("    elapsed time: " + prettyPrintTime(elapsedTime))
 
+                timingsFile = open(timingsFilename, 'w')
                 timingsFile.write(str(elapsedTime) + "\n")
                 timingsFile.close()
 
