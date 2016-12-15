@@ -29,13 +29,14 @@ void buildAdjacency(Mesh *mesh, Eigen::SparseMatrix<double>& W)
             he = he->flip->next;
         } while (he != v->he);
         
-        WTriplets.push_back(Eigen::Triplet<double>(v->index, v->index, sumCoefficients));
+        WTriplets.push_back(Eigen::Triplet<double>(v->index, v->index,
+                                                   sumCoefficients + 1e-8));
     }
     
     W.setFromTriplets(WTriplets.begin(), WTriplets.end());
 }
 
-void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A)
+void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A, const double scale)
 {
     std::vector<Eigen::Triplet<double>> ATriplets;
     
@@ -47,7 +48,7 @@ void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A)
     }
     
     A.setFromTriplets(ATriplets.begin(), ATriplets.end());
-    A *= mesh->vertices.size() / sum;
+    A *= scale/sum;
 }
 
 void Descriptor::computeEig(const int K, const bool loadEig)
@@ -70,7 +71,7 @@ void Descriptor::computeEig(const int K, const bool loadEig)
         
         // build area matrix
         Eigen::SparseMatrix<double> A(v, v);
-        buildAreaMatrix(mesh, A);
+        buildAreaMatrix(mesh, A, mesh->vertices.size());
         
         // compute eigenvectors and eigenvalues
         Spectra::SparseSymMatProd<double> opW(W);
@@ -161,24 +162,20 @@ void extrapolateEvals(double& xhat, double& yhat, double& m, const Eigen::Vector
 
 void computeLaplacians(std::vector<Eigen::SparseMatrix<double>>& Ls,
                        std::vector<Eigen::SparseMatrix<double>>& As,
-                       std::vector<Eigen::SparseMatrix<double>>& Ainvs,
                        const MultiresMesh& mrm)
 {
+    double scale = mrm.lod(0)->vertices.size();
     for (int l = 0; l < mrm.numLods(); l++) {
         Mesh *lod = mrm.lod(l);
         int v = (int)lod->vertices.size();
         
         // resize
-        Ls[l].resize(v, v); As[l].resize(v, v); Ainvs[l].resize(v, v);
+        Ls[l].resize(v, v); As[l].resize(v, v);
         
         // compute laplacian and area matrices
         buildAdjacency(lod, Ls[l]);
-        buildAreaMatrix(lod, As[l]);
-        for (VertexIter v = lod->vertices.begin(); v != lod->vertices.end(); v++) {
-            Ainvs[l].insert(v->index, v->index) = 1.0/As[l].coeffRef(v->index, v->index);
-        }
-        Ainvs[l].makeCompressed();
-        Ls[l] = Ainvs[l]*Ls[l];
+        buildAreaMatrix(lod, As[l], scale);
+        Ls[l] = As[l].cwiseInverse()*Ls[l];
     }
 }
 
@@ -186,7 +183,6 @@ void computeBinomialEntries(std::vector<Eigen::SparseMatrix<double>>& binomialSe
                             const Eigen::SparseMatrix<double>& L)
 {
     int k = 0;
-    double mf = 1;
     Eigen::SparseMatrix<double> Id(L.cols(), L.cols()); Id.setIdentity();
     Eigen::SparseMatrix<double> Q = Id;
     for (int m = 0; m < (int)binomialSeries.size(); m++) {
@@ -195,17 +191,16 @@ void computeBinomialEntries(std::vector<Eigen::SparseMatrix<double>>& binomialSe
             k++;
         }
         
-        if (m > 0) mf *= m;
-        Q /= mf;
+        if (m > 0) Q /= m;
         binomialSeries[m] = Q;
     }
 }
 
-void computeExponentialRepresentation(Eigen::SparseMatrix<double>& Kt, const double t, const int iters,
+void computeExponentialRepresentation(Eigen::SparseMatrix<double>& Kt, const double t,
                                       const std::vector<Eigen::SparseMatrix<double>>& binomialSeries)
 {
     Kt.setZero();
-    for (int m = 0; m < iters; m++) {
+    for (int m = 0; m < (int)binomialSeries.size(); m++) {
         Kt += binomialSeries[m]*pow(exp(-t) - 1, m);
     }
 }
@@ -245,39 +240,45 @@ void Descriptor::computeFastHks()
     
     // build laplacian and area matrices
     int lods = mrm.numLods();
-    std::vector<Eigen::SparseMatrix<double>> Ls(lods), As(lods), Ainvs(lods);
-    computeLaplacians(Ls, As, Ainvs, mrm);
+    std::vector<Eigen::SparseMatrix<double>> Ls(lods), As(lods);
+    computeLaplacians(Ls, As, mrm);
     
     for (int i = 0; i < N; i++) {
         // 2. choose coarsest resolution level l s.t. cn > r(t)
         int r = 0, l = lods-1;
         while (exp(-(yhat - m*(r - xhat))*ts[i]) > reps) r++;
         while (l > 0 && c*mrm.lod(l)->vertices.size() < r) l--;
+        std::cout << "l: " << l << " r: " << r << std::endl;
         
         // 3. compute sparse heat kernel on l
         int v = (int)mrm.lod(l)->vertices.size();
         Eigen::SparseMatrix<double> Kt(v, v);
         std::vector<Eigen::SparseMatrix<double>> binomialSeries(bN+1);
-        double t1 = 0.01, t = 0.0;
+        double t1 = 0.001, t = 0.0;
         int s = 0;
         
         // compute Kt for small t
         computeBinomialEntries(binomialSeries, Ls[l]);
-        while ((binomialSeries[bN]*pow(exp(-t1) - 1, bN)).norm() < seps) t1 += 0.01;
+        while ((binomialSeries[bN]*pow(exp(-t1) - 1, bN)).norm() < seps) t1 += 0.001;
         while ((t = ts[i]/pow(2, s)) > t1) s++;
-        computeExponentialRepresentation(Kt, t, bN+1, binomialSeries);
+        computeExponentialRepresentation(Kt, t, binomialSeries);
+        std::cout << "t1: " << t1 << " t: " << t << " s: " << s << std::endl;
         
         // compute Kt for ts[i]
         for (int j = 0; j < s; j++) {
             sparsify(Kt, seps);
-            Eigen::SparseMatrix<double> KtA = Kt*As[l];
-            Kt = KtA*KtA*Ainvs[l];
-            t = 2*t;
+            Kt = Kt*Kt;
+            std::cout << "Kt 1: " << Kt.toDense().lpNorm<1>() << std::endl;
+            std::cout << "Kt 2: " << Kt.norm() << std::endl;
         }
         
         // 4. project sparse heat kernel on finest resolution level
         Eigen::SparseMatrix<double> P = mrm.prolongationMatrix(l);
+        std::cout << "P 1: " << P.toDense().lpNorm<1>() << std::endl;
+        std::cout << "P 2: " << P.norm() << std::endl;
         Kt = P*Kt*P.transpose();
+        std::cout << "pKt 1: " << Kt.toDense().lpNorm<1>() << std::endl;
+        std::cout << "pKt 2: " << Kt.norm() << std::endl;
         
         // set descriptor value for current time step
         for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
