@@ -18,11 +18,12 @@ def main():
     # one was given, or a dialog otherwise
     if(len(sys.argv) > 3):
         nEigs = int(sys.argv[1])
-        filename = sys.argv[2]
-        outFilename = sys.argv[3]
+        evalsAndEvecs = sys.argv[2]
+        filename = sys.argv[3]
+        outFilename = sys.argv[4]
     else:
         # TODO Implement a file dialog here
-        raise Exception("Syntax: nEigs path/to/mesh.obj path/to/outfile.txt")
+        raise Exception("Syntax: nEigs evalsAndEvecs[n/y] path/to/mesh.obj path/to/outfile.txt")
 
     # Read in the mesh
     mesh = cy.HalfEdgeMesh(cy.readMesh(filename))
@@ -103,15 +104,28 @@ def main():
     
 
     # Open output file and write result
+
     with open(outFilename, 'w') as outFile:
+        if (evalsAndEvecs == "n"):
+            # Write the eigenvectors
+            for iVert in range(len(mesh.verts)):
+                for iEig in range(nEigs):
+                    outFile.write(str(eigenvectors[iVert, iEig]) + " ")
+                outFile.write("\n")
+        else:
+            # Write evec rows and columns
+            outFile.write(str(len(mesh.verts)) + "\n")
+            outFile.write(str(nEigs) + "\n")
 
-        # Write the eigenvectors
-        for iVert in range(len(mesh.verts)):
-
+            # Write evals
             for iEig in range(nEigs):
+                outFile.write(str(eigenvalues[iEig]) + "\n")
 
-                outFile.write(str(eigenvectors[iVert, iEig]) + " ")
+            # Write evecs
+            for iVert in range(len(mesh.verts)):
+                for iEig in range(nEigs):
+                    outFile.write(str(eigenvectors[iVert, iEig]) + " ")
+                outFile.write("\n")
 
-            outFile.write("\n")
 
 if __name__ == "__main__": main()
