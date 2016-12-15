@@ -18,16 +18,15 @@ nPRIncrements = 500
 ### Wrappers to compute the result each of the algorithms.
 # Should return a wall clock time in seconds in addition to writing output files
 
-def compute_spectrum(inputFile, outputFile, n):
+def compute_spectrum(n, evalsAndEvecs, inputFile, outputFile):
 
     methodLocation = "../methods/laplacian-eigenvec/computeEVecs.py"
-    print("    in " + str(inputFile))
-    print("    out " + str(outputFile))
+    
     # Start timing
     startTime = timer()
     
     # Start the process
-    runner = subprocess.Popen(["python", methodLocation, n, inputFile, outputFile])
+    runner = subprocess.Popen(["python", methodLocation, n, evalsAndEvecs, inputFile, outputFile])
     runner.wait()
     
     # Finish timing
@@ -55,7 +54,7 @@ def eval_strawman(inputFile, outputFile):
 
 def eval_laplacian(inputFile, outputFile):
 
-    return compute_spectrum(inputFile, outputFile, "30")
+    return compute_spectrum("30", "n", inputFile, outputFile)
 
 
 def eval_curvature(inputFile, outputFile):
@@ -385,8 +384,8 @@ def main():
             print("  infile " + str(inFile))
                 
             # Run each method
-            eigTime = 0
             eigFile = ""
+            eigTime = 0
             for method in methods:
                 
                 print("  Using method " + method)
@@ -410,7 +409,7 @@ def main():
                     print("Computing Spectrum")
                     eigFile = os.path.join(outDir, name + ".eig")
                     print("    eigfile " + str(eigFile))
-                    eigTime = compute_spectrum(inFile, eigFile, "500")
+                    eigTime = compute_spectrum("500", "y", inFile, eigFile)
 
                 outFile = os.path.join(outDir, name + ".features")
                 print("    outfile " + str(outFile))
