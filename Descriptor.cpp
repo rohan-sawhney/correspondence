@@ -244,6 +244,7 @@ void Descriptor::computeFastHks()
     std::vector<Eigen::SparseMatrix<double>> Ls(lods), As(lods);
     computeLaplacians(Ls, As, mrm);
     
+    // TODO: cache Kt based on lod l, t
     for (int i = 0; i < N; i++) {
         // 2. choose coarsest resolution level l s.t. cn > r(t)
         int r = 0, l = lods-1;
@@ -268,7 +269,7 @@ void Descriptor::computeFastHks()
         // compute Kt for ts[i]
         for (int j = 0; j < s; j++) {
             sparsify(Kt, seps);
-            Kt = Kt*Kt;
+            Kt = Kt*As[l]*Kt;
             std::cout << "Kt 1: " << Kt.toDense().lpNorm<1>() << std::endl;
             std::cout << "Kt 2: " << Kt.norm() << std::endl;
         }

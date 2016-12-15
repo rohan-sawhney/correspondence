@@ -292,6 +292,30 @@ def plotMethodAccuracy(datasetName, methodName, accuracyLists, plotDir):
     plt.savefig(outname)
     plt.clf()
 
+
+def plotMerged(averagedData, plotDir):
+
+    print("Plotting merged")
+
+    yData = np.array(averagedData)
+    xData = np.linspace(0, 1, num=nPRIncrements)
+
+    sns.set(font_scale=2)
+    plt.title("averaged accuracy")
+    plt.xlabel("Threshold")
+    plt.ylabel("Fraction under threshold")
+    
+    i = 0
+    colors = ["red", "blue", "green", "white", "black"]
+    for method in methods:
+        sns.tsplot(yData[i], xData, color=colors[i], err_style="unit_traces",
+                   err_palette=sns.color_palette(["#ccd8ff"]))
+        i = i+1
+    
+    outname = plotDir + "averaged-accuracy.pdf"
+    plt.savefig(outname)
+    plt.clf()
+
 ### Helpers
 def prettyPrintTime(elapsed):
 
@@ -353,7 +377,7 @@ def main():
     # methods = ["strawman", "curvature", "laplacian-eigenvecs"]
     methodFunctions = {"strawman" : eval_strawman,
                        "curvature" : eval_curvature,
-                       "laplacian-eigenvecs" : eval_laplacian,
+                       "laplacian-eigenvecs" : eval_laplacian}#,
                        "hks" : eval_HKS,
                        "wks" : eval_WKS}
 
@@ -497,7 +521,7 @@ def main():
         pairFilename = os.path.join(datasetPath, "pairs.txt")
         pairList = parsePairFile(pairFilename)
 
-        methodAccuracies = {}
+        methodAccuracies = []
 
         for method in methods:
 
@@ -507,14 +531,15 @@ def main():
             evalResults = parseAccuracies(pairList, evaluteDir)
 
             # Make a plot of the evaluation results
-            plotMethodAccuracy(dataset, method, evalResults, plotRoot)       
+            plotMethodAccuracy(dataset, method, evalResults, plotRoot)
+            A = np.array(evalResults)
+            A = np.sum(A, axis=0) / float(len(evalResults))
+            methodAccuracies.append(A.tolist())
 
-            # TODO ROHAN: Accumulate to make a merged plot
+        # Accumulate to make a merged plot
+        plotMerged(methodAccuracies, plotRoot)
 
-            # TODO ROHAN: Performance vs accuracy - area under curve
-
-
-        # Make a combined plot for all methods
+        # TODO ROHAN: Performance vs accuracy - area under curve
 
 
 if __name__ == "__main__":
