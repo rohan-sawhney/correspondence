@@ -13,8 +13,9 @@ GLuint transformUbo;
 GLuint lightUbo;
 
 std::string path;
-std::string shaderPath;
+std::string eigPath;
 std::string outputPath;
+std::string shaderPath;
 Shader meshShader;
 Shader normalShader;
 Shader wireframeShader;
@@ -336,6 +337,15 @@ void reset()
     glDeleteBuffers(1, &lightUbo);
 }
 
+void computeDescriptor(int descriptorName)
+{
+    Descriptor descriptor(&mesh);
+    descriptor.compute(descriptorName, eigPath, outputPath);
+    computedDescriptor = true;
+    setFeaturePoints();
+    if (showDescriptor) updateColor();
+}
+
 void keyboardPressed(unsigned char key, int x, int y)
 {
     keys[key] = true;
@@ -345,32 +355,16 @@ void keyboardPressed(unsigned char key, int x, int y)
         exit(0);
         
     } else if (keys[DIGIT_OFFSET + 1]) {
-        Descriptor descriptor(&mesh);
-        descriptor.compute(HKS);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        computeDescriptor(HKS);
         
     } else if (keys[DIGIT_OFFSET + 2]) {
-        Descriptor descriptor(&mesh);
-        descriptor.compute(FAST_HKS);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        computeDescriptor(FAST_HKS);
         
     } else if (keys[DIGIT_OFFSET + 3]) {
-        Descriptor descriptor(&mesh);
-        descriptor.compute(WKS);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        computeDescriptor(WKS);
         
     } else if (keys[DIGIT_OFFSET + 4]) {
-        Descriptor descriptor(&mesh);
-        descriptor.compute(CURVE);
-        computedDescriptor = true;
-        setFeaturePoints();
-        if (showDescriptor) updateColor();
+        computeDescriptor(CURVE);
         
     } else if (keys[DIGIT_OFFSET + 5]) {
         showDescriptor = !showDescriptor;
@@ -461,7 +455,7 @@ void printUsage(char *programName)
 {
     std::cout << "Usage: "
               << programName
-              << " -descriptor 0/1/2/3 -obj_path PATH -load_eig 0/1"
+              << " -descriptor 0/1/2/3 -obj_path PATH -eig_path PATH"
               << " -output_path PATH -shader_path PATH"
               << std::endl;
 }
@@ -472,8 +466,6 @@ int main(int argc, char** argv)
     // parse
     int descriptorName = -1;
     bool objPathSpecified = false;
-    bool loadEig = true;
-    bool outputPathSpecified = false;
     bool shaderPathSpecified = false;
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "-descriptor" && i+1 < argc) {
@@ -485,13 +477,12 @@ int main(int argc, char** argv)
             objPathSpecified = true;
             i++;
             
-        } else if (std::string(argv[i]) == "-load_eig" && i+1 < argc) {
-            loadEig = (bool)argv[i+1];
+        } else if (std::string(argv[i]) == "-eig_path" && i+1 < argc) {
+            eigPath = argv[i+1];
             i++;
             
         } else if (std::string(argv[i]) == "-output_path" && i+1 < argc) {
             outputPath = argv[i+1];
-            outputPathSpecified = true;
             i++;
             
         } else if (std::string(argv[i]) == "-shader_path" && i+1 < argc) {
@@ -528,11 +519,8 @@ int main(int argc, char** argv)
             glutMotionFunc(mouse);
             
             if (descriptorName >= HKS && descriptorName <= CURVE) {
-                Descriptor descriptor(&mesh);
-                descriptor.compute(descriptorName, loadEig);
-                computedDescriptor = showDescriptor = true;
-                setFeaturePoints();
-                updateColor();
+                showDescriptor = true;
+                computeDescriptor(descriptorName);
                 title += ", t: " + std::to_string(t);
                 glutSetWindowTitle(title.c_str());
             }
@@ -542,7 +530,7 @@ int main(int argc, char** argv)
         } else if (descriptorName >= HKS && descriptorName <= CURVE) {
             if (mesh.read(path)) {
                 Descriptor descriptor(&mesh);
-                descriptor.compute(descriptorName, loadEig, outputPath);
+                descriptor.compute(descriptorName, eigPath, outputPath);
             }
             
         } else {

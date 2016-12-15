@@ -51,14 +51,12 @@ void buildAreaMatrix(Mesh *mesh, Eigen::SparseMatrix<double>& A, const double sc
     A *= scale/sum;
 }
 
-void Descriptor::computeEig(const int K, const bool loadEig)
+void Descriptor::computeEig(int K, const std::string& eigFilename)
 {
     // read eigvalues and eigenvectors from file
-    std::string filename = mesh->name;
-    filename.replace(filename.find_last_of(".")+1, 3, "eig");
-    std::ifstream in(filename);
+    std::ifstream in(eigFilename);
     
-    if (loadEig && in.is_open()) {
+    if (in.is_open()) {
         MeshIO::readEig(in, evals, evecs);
         in.close();
         
@@ -98,10 +96,13 @@ void Descriptor::computeEig(const int K, const bool loadEig)
         std::cout << "||Lx - λAx||_inf = " << err.array().abs().maxCoeff() << std::endl;
         
         // write eigvalues and eigenvectors to file
-        std::ofstream out(filename);
+        std::ofstream out(eigFilename);
         if (out.is_open()) {
             MeshIO::writeEig(out, evals, evecs);
             out.close();
+        
+        } else {
+            std::cout << "Not writing eigenspectrum, no valid path specified" << std::endl;
         }
     }
 }
@@ -394,7 +395,6 @@ void buildSimpleAverager(Mesh *mesh, Eigen::SparseMatrix<double>& L)
 void Descriptor::computeCurve()
 {
 	std::vector<int> smoothLevels = {0, 1, 5, 20, 50};
-	int dSize = 2*(int)smoothLevels.size(); // mean, gaussian at each level
 	 
 	// compute the mean and gaussian curvature values
     int v = (int)mesh->vertices.size();
@@ -404,7 +404,7 @@ void Descriptor::computeCurve()
 
 	// allocate space for the descriptors
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
-        v->descriptor = Eigen::VectorXd::Zero(dSize);
+        v->descriptor = Eigen::VectorXd::Zero(N);
 	}
 
 	// compute a shifted-laplacian matrix for taking averages
@@ -416,7 +416,7 @@ void Descriptor::computeCurve()
 	int iLevel = 0;
 	for (int smoothLevel : smoothLevels) {
 		// smooth as needed
-		while(smoothingStepsCompleted < smoothLevel) {
+		while (smoothingStepsCompleted < smoothLevel) {
 			K = avgM * K;
 			H = avgM * H;
 
@@ -451,29 +451,26 @@ void Descriptor::normalize()
     }
 }
 
-void Descriptor::compute(int descriptor, bool loadEig, std::string outFilename)
+void Descriptor::compute(int descriptor,
+                         const std::string& eigFilename,
+                         const std::string& outFilename)
 {
     // compute descriptor
-    std::string descriptorName;
     switch (descriptor) {
         case HKS:
-            computeEig(300, loadEig);
+            computeEig(100, eigFilename);
             computeHks();
-            descriptorName = "hks";
             break;
         case FAST_HKS:
-            computeEig(30, loadEig);
+            computeEig(30, eigFilename);
             computeFastHks();
-            descriptorName = "fks";
             break;
         case WKS:
-            computeEig(300, loadEig);
+            computeEig(300, eigFilename);
             computeWks();
-            descriptorName = "wks";
             break;
         case CURVE:
             computeCurve();
-            descriptorName = "curve";
             break;
     }
     
@@ -485,6 +482,7 @@ void Descriptor::compute(int descriptor, bool loadEig, std::string outFilename)
     if (out.is_open()) {
         MeshIO::writeDescriptor(out, *mesh);
         out.close();
+        
     } else {
 		std::cout << "Not writing descriptor, no valid path specified" << std::endl;
 	}

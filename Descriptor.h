@@ -13,11 +13,13 @@ public:
     Descriptor(Mesh *mesh0);
     
     // compute
-	void compute(int descriptor, bool loadEig = true, std::string outFilename = "");
+	void compute(int descriptor,
+                 const std::string& eigFilename,
+                 const std::string& outFilename);
     
 private:
     // compute eigenvalues and eigenvectors
-    void computeEig(int K, bool loadEig);
+    void computeEig(int K, const std::string& eigFilename);
     
     // compute hks
     void computeHks();
