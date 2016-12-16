@@ -81,10 +81,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				328A3BD91DD6BF65000ADE17 /* OpenGL.framework in Frameworks */,
 				3273B4B91DECCFAF00C3CA7D /* libOpenMeshTools.a in Frameworks */,
 				3273B4BA1DECCFAF00C3CA7D /* libOpenMeshCore.a in Frameworks */,
 				328A3BDB1DD6BF6A000ADE17 /* GLUT.framework in Frameworks */,
-				328A3BD91DD6BF65000ADE17 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

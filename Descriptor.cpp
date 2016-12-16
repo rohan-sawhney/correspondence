@@ -22,6 +22,7 @@ void buildAdjacency(Mesh *mesh, Eigen::SparseMatrix<double>& W)
         double sumCoefficients = 0.0;
         do {
             double coefficient = 0.5 * (he->cotan() + he->flip->cotan());
+            if (coefficient < 0.0) coefficient = 0.0;
             sumCoefficients += coefficient;
             
             WTriplets.push_back(Eigen::Triplet<double>(v->index, he->flip->vertex->index, -coefficient));
@@ -194,6 +195,7 @@ void computeBinomialEntries(std::vector<Eigen::SparseMatrix<double>>& binomialSe
         
         if (m > 0) Q /= m;
         binomialSeries[m] = Q;
+        std::cout << "Q: " << Q.diagonal().sum() << std::endl;
     }
 }
 
@@ -204,6 +206,7 @@ void computeExponentialRepresentation(Eigen::SparseMatrix<double>& Kt, const dou
     for (int m = 0; m < (int)binomialSeries.size(); m++) {
         Kt += binomialSeries[m]*pow(exp(-t) - 1, m);
     }
+    std::cout << "Kt init: " << Kt.diagonal().sum() << std::endl;
 }
 
 void sparsify(Eigen::SparseMatrix<double>& Kt, double eps)
@@ -224,7 +227,7 @@ void Descriptor::computeFastHks()
     const double reps = 1e-4;
     const double seps = 1e-6;
     const int bN = 15;
-    const std::vector<int> ts = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+    const std::vector<int> ts = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
     
     // initialize descriptors
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
@@ -270,17 +273,13 @@ void Descriptor::computeFastHks()
         for (int j = 0; j < s; j++) {
             sparsify(Kt, seps);
             Kt = Kt*As[l]*Kt;
-            std::cout << "Kt 1: " << Kt.toDense().lpNorm<1>() << std::endl;
-            std::cout << "Kt 2: " << Kt.norm() << std::endl;
+            std::cout << "Kt: " << Kt.diagonal().sum() << " nz: " << Kt.nonZeros() << std::endl;
         }
         
         // 4. project sparse heat kernel on finest resolution level
         Eigen::SparseMatrix<double> P = mrm.prolongationMatrix(l);
-        std::cout << "P 1: " << P.toDense().lpNorm<1>() << std::endl;
-        std::cout << "P 2: " << P.norm() << std::endl;
         Kt = P*Kt*P.transpose();
-        std::cout << "pKt 1: " << Kt.toDense().lpNorm<1>() << std::endl;
-        std::cout << "pKt 2: " << Kt.norm() << std::endl;
+        std::cout << "pKt: " << Kt.diagonal().sum() << std::endl;
         
         // set descriptor value for current time step
         for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
@@ -385,7 +384,9 @@ void buildSimpleAverager(Mesh *mesh, Eigen::SparseMatrix<double>& L)
         HalfEdgeCIter he = v->he;
         double degree = v->degree();
         do {
-            LTriplet.push_back(Eigen::Triplet<double>(v->index, he->flip->vertex->index, 1.0/degree));
+            LTriplet.push_back(Eigen::Triplet<double>(v->index, he->flip->vertex->index,
+                                                      1.0/degree));
+            
             he = he->flip->next;
         } while (he != v->he);
     }
@@ -459,15 +460,15 @@ void Descriptor::compute(int descriptor,
     // compute descriptor
     switch (descriptor) {
         case HKS:
-            computeEig(100, eigFilename);
+            computeEig(500, eigFilename);
             computeHks();
             break;
         case FAST_HKS:
-            computeEig(30, eigFilename);
+            computeEig(50, "");
             computeFastHks();
             break;
         case WKS:
-            computeEig(300, eigFilename);
+            computeEig(500, eigFilename);
             computeWks();
             break;
         case CURVE:
