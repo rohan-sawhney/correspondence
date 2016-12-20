@@ -188,14 +188,13 @@ void computeBinomialEntries(std::vector<Eigen::SparseMatrix<double>>& binomialSe
     Eigen::SparseMatrix<double> Id(L.cols(), L.cols()); Id.setIdentity();
     Eigen::SparseMatrix<double> Q = Id;
     for (int m = 0; m < (int)binomialSeries.size(); m++) {
-        if (k <= m-1) {
+        if (k == m-1) {
             Q = Q*(L - k*Id);
             k++;
         }
         
         if (m > 0) Q /= m;
         binomialSeries[m] = Q;
-        std::cout << "Q: " << Q.diagonal().sum() << std::endl;
     }
 }
 
@@ -206,7 +205,6 @@ void computeExponentialRepresentation(Eigen::SparseMatrix<double>& Kt, const dou
     for (int m = 0; m < (int)binomialSeries.size(); m++) {
         Kt += binomialSeries[m]*pow(exp(-t) - 1, m);
     }
-    std::cout << "Kt init: " << Kt.diagonal().sum() << std::endl;
 }
 
 void sparsify(Eigen::SparseMatrix<double>& Kt, double eps)
@@ -227,7 +225,7 @@ void Descriptor::computeFastHks()
     const double reps = 1e-4;
     const double seps = 1e-6;
     const int bN = 15;
-    const std::vector<int> ts = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+    const std::vector<int> ts = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
     
     // initialize descriptors
     for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
@@ -253,7 +251,6 @@ void Descriptor::computeFastHks()
         int r = 0, l = lods-1;
         while (exp(-(yhat - m*(r - xhat))*ts[i]) > reps) r++;
         while (l > 0 && c*mrm.lod(l)->vertices.size() < r) l--;
-        std::cout << "l: " << l << " r: " << r << std::endl;
         
         // 3. compute sparse heat kernel on l
         int v = (int)mrm.lod(l)->vertices.size();
@@ -267,19 +264,17 @@ void Descriptor::computeFastHks()
         while ((binomialSeries[bN]*pow(exp(-t1) - 1, bN)).norm() < seps) t1 += 0.001;
         while ((t = ts[i]/pow(2, s)) > t1) s++;
         computeExponentialRepresentation(Kt, t, binomialSeries);
-        std::cout << "t1: " << t1 << " t: " << t << " s: " << s << std::endl;
+        Kt = Kt*As[l].cwiseInverse();
         
         // compute Kt for ts[i]
         for (int j = 0; j < s; j++) {
             sparsify(Kt, seps);
             Kt = Kt*As[l]*Kt;
-            std::cout << "Kt: " << Kt.diagonal().sum() << " nz: " << Kt.nonZeros() << std::endl;
         }
         
         // 4. project sparse heat kernel on finest resolution level
         Eigen::SparseMatrix<double> P = mrm.prolongationMatrix(l);
         Kt = P*Kt*P.transpose();
-        std::cout << "pKt: " << Kt.diagonal().sum() << std::endl;
         
         // set descriptor value for current time step
         for (VertexIter v = mesh->vertices.begin(); v != mesh->vertices.end(); v++) {
